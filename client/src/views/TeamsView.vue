@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Plus, Send } from 'lucide-vue-next';
+import { Plus } from 'lucide-vue-next';
 import AppHeader from '../components/layout/AppHeader.vue';
 import { useAuthStore } from '../stores/auth';
 import { useTeamsStore } from '../stores/teams';
@@ -11,7 +11,6 @@ const auth = useAuthStore();
 const teams = useTeamsStore();
 const error = ref('');
 const createForm = reactive({ name: '', description: '' });
-const joinCode = ref('');
 
 onMounted(() => teams.fetchTeams().catch((err) => {
   error.value = err.message;
@@ -23,17 +22,6 @@ async function createTeam() {
     const team = await teams.createTeam(createForm);
     createForm.name = '';
     createForm.description = '';
-    await router.push(`/team/${team.id}`);
-  } catch (err) {
-    error.value = err.message;
-  }
-}
-
-async function joinTeam() {
-  error.value = '';
-  try {
-    const team = await teams.joinTeam(joinCode.value);
-    joinCode.value = '';
     await router.push(`/team/${team.id}`);
   } catch (err) {
     error.value = err.message;
@@ -73,17 +61,6 @@ function roleLabel(role) {
           </label>
           <button class="button" type="submit" :disabled="teams.loading">
             <Plus :size="17" /> Create
-          </button>
-        </form>
-
-        <form class="panel stack" style="padding:18px" @submit.prevent="joinTeam">
-          <h2 style="margin:0">Join team</h2>
-          <label class="field">
-            <span>Invite code</span>
-            <input v-model="joinCode" class="input" required />
-          </label>
-          <button class="button secondary" type="submit" :disabled="teams.loading">
-            <Send :size="17" /> Join
           </button>
         </form>
       </div>
