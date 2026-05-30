@@ -48,6 +48,7 @@ graph TB
 
 - The application is team-scoped: every item, tag, activity entry, comment, and progress update must belong to a team directly or through an item.
 - Team members can collaborate on items in real time. Guests, public sharing, and cross-team visibility are out of scope for V1.
+- The application also has an instance-level administrator role for tenant management. Instance admins can see every team in the deployment, inspect each team's members, change team member roles, remove members, and create items in any team. This is separate from per-team `admin` / `member` membership roles.
 - Dashboard supports both Kanban and list views in V1.
 - Progress updates and comments are text-only in V1; file attachments are deferred.
 - @mentions, notification delivery, subtasks, recurring tasks, and custom workflow columns are deferred.
@@ -92,6 +93,7 @@ erDiagram
         TEXT password_hash
         TEXT display_name
         TEXT avatar_color
+        BOOLEAN is_instance_admin
         DATETIME created_at
     }
 
@@ -192,6 +194,7 @@ Add these constraints in migrations, not only in application code:
 | Table | Constraint / Behavior |
 |---|---|
 | `users` | `username` and `email` unique, preferably case-insensitive (`COLLATE NOCASE` in SQLite). |
+| `users` | `is_instance_admin` uses a DB-level `CHECK` constraint and defaults to `0`; the seeded `admin` account is an instance admin. |
 | `teams` | `invite_code` unique; `created_by` references `users.id`; do not allow deleting a creator user while teams still reference them. |
 | `team_members` | `UNIQUE(team_id, user_id)`; `team_id` cascades on team delete; `role CHECK(role IN ('admin', 'member'))`. |
 | `items` | `team_id` cascades on team delete; `created_by` references `users.id`; `assigned_to` references `users.id` and should be nullable with `ON DELETE SET NULL` if user deletion is later supported; `status`, `priority`, and `is_pinned` use DB-level `CHECK` constraints. |
@@ -204,6 +207,7 @@ Add these constraints in migrations, not only in application code:
 DB-level checks:
 
 - `team_members.role IN ('admin', 'member')`
+- `users.is_instance_admin IN (0, 1)`
 - `items.status IN ('todo', 'in_progress', 'done')`
 - `items.priority IN ('low', 'medium', 'high', 'urgent')`
 - `items.is_pinned IN (0, 1)`
@@ -275,6 +279,11 @@ Schema fields to consider before implementation:
 | POST | `/api/teams/join` | Join team via invite code |
 | GET | `/api/teams/:id/members` | List team members |
 | PUT | `/api/teams/:id` | Update team info (admin) |
+
+### Instance Admin
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/overview` | Instance admin overview of all teams, users, memberships, and role assignments |
 
 ### Items
 | Method | Endpoint | Description |
@@ -432,6 +441,7 @@ Additional events recommended for consistency:
 | **My Items** | `/team/:id/my-items` | Personal filtered view |
 | **Activity Feed** | `/team/:id/activity` | Global team activity stream |
 | **Team Settings** | `/team/:id/settings` | Manage members, invite code, team info |
+| **Admin Console** | `/admin` | Instance-level team/member overview for instance admins |
 
 ### Key Components
 

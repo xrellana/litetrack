@@ -1,0 +1,32 @@
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 170ms ease, transform 170ms ease;
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition: all 180ms ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 160ms ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
