@@ -54,6 +54,13 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.loading = false;
       }
+    },
+    async logout() {
+      try {
+        await api.post('/auth/logout');
+      } finally {
+        this.user = null;
+      }
     }
   }
 });

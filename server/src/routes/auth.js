@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 const db = require('../db/connection');
-const { authenticate, issueAuthCookies } = require('../middleware/auth');
+const { AUTH_COOKIE, CSRF_COOKIE, authenticate, issueAuthCookies } = require('../middleware/auth');
 const { AppError, asyncHandler, validateBody } = require('../middleware/errors');
 const { avatarColor, normalizeEmail, publicUser, USER_COLUMNS } = require('../services/permissions');
 const { sendData, sqliteConflict } = require('../services/http');
@@ -75,6 +75,17 @@ router.post('/login', authLimiter, validateBody(loginSchema), asyncHandler(async
 
   const { csrfToken } = issueAuthCookies(res, user.id);
   return sendData(res, { user: publicUser(user), csrfToken });
+}));
+
+router.post('/logout', authLimiter, asyncHandler(async (req, res) => {
+  const opts = {
+    path: '/',
+    sameSite: process.env.COOKIE_SAMESITE || 'lax',
+    secure: String(process.env.COOKIE_SECURE).toLowerCase() === 'true'
+  };
+  res.clearCookie(AUTH_COOKIE, { ...opts, httpOnly: true });
+  res.clearCookie(CSRF_COOKIE, { ...opts, httpOnly: false });
+  return sendData(res, { success: true });
 }));
 
 router.get('/me', authenticate, asyncHandler(async (req, res) => {

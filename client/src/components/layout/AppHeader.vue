@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
-import { Activity, LayoutDashboard, ListTodo, Settings, ShieldCheck, Users, WifiOff } from 'lucide-vue-next';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { Activity, LayoutDashboard, ListTodo, LogOut, Settings, ShieldCheck, Users, WifiOff } from 'lucide-vue-next';
 import UserAvatar from '../common/UserAvatar.vue';
 import { socketState } from '../../services/socket';
 import { useAuthStore } from '../../stores/auth';
@@ -10,7 +10,13 @@ import { useTeamsStore } from '../../stores/teams';
 const auth = useAuthStore();
 const teams = useTeamsStore();
 const route = useRoute();
+const router = useRouter();
 const teamId = computed(() => Number(route.params.id || teams.activeTeamId));
+
+async function handleLogout() {
+  await auth.logout();
+  router.push({ name: 'login' });
+}
 </script>
 
 <template>
@@ -60,6 +66,9 @@ const teamId = computed(() => Number(route.params.id || teams.activeTeamId));
           </small>
         </span>
       </span>
+      <button class="button icon" title="Logout" @click="handleLogout">
+        <LogOut :size="18" />
+      </button>
     </div>
   </header>
 </template>
