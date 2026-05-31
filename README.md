@@ -56,6 +56,83 @@ Open the app at `http://127.0.0.1:5173/`.
 - `teamadmin` / `password123` - Team admin
 - `member` / `password123` - Team member
 
+## Production Deployment
+
+LiteTrack's frontend and backend are decoupled. For production, the frontend should be built into static assets, and the backend should run as a persistent Node.js process.
+
+### 1. Build the Frontend
+
+```bash
+cd client
+npm install
+npm run build
+```
+
+This generates static assets in the `client/dist` directory. You can serve these files using a web server like Nginx, or a static hosting platform (e.g., Vercel, Netlify).
+
+### 2. Configure the Backend
+
+```bash
+cd server
+npm install --omit=dev
+```
+
+Set the following environment variables in your server environment or an `.env` file:
+- `NODE_ENV=production`
+- `PORT=4000` (or your chosen port)
+- `JWT_SECRET=your_super_secret_key`
+- `CLIENT_ORIGIN=https://your-production-domain.com` (Required for CORS and Socket.io to accept connections from your frontend)
+
+### 3. Run Database Migrations
+
+Before starting the server, initialize/update the production SQLite database:
+
+```bash
+cd server
+npm run migrate
+```
+
+### 4. Start the Backend
+
+In production, it's highly recommended to use a process manager like **PM2** to keep the Node.js application running and restart it automatically upon failure.
+
+```bash
+npm install -g pm2
+pm2 start src/index.js --name litetrack-api
+```
+
+### 5. Nginx Reverse Proxy (Example)
+
+If hosting both the frontend and backend on the same Linux server, you can use Nginx to serve the static frontend and reverse-proxy API & WebSocket requests to the backend.
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    # Serve static frontend
+    location / {
+        root /path/to/litetrack/client/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy API requests to Node backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Proxy Socket.io connections
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+}
+```
 ## Verification
 
 Run backend tests:
