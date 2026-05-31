@@ -36,14 +36,13 @@ onMounted(load);
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">My Items</h1>
-          <p class="muted">Items assigned to {{ auth.user?.display_name }}.</p>
+          <h1 class="page-title">{{ $t('work.myItems') }}</h1>
+          <p class="muted">{{ $t('myItems.description', { name: auth.user?.display_name }) }}</p>
         </div>
       </div>
       <div v-if="items.error" class="error-box">{{ items.error }}</div>
-      <div v-if="items.loading" class="empty">Loading assigned items...</div>
+      <div v-if="items.loading" class="empty">{{ $t('myItems.loading') }}</div>
       <ItemList v-else :items="items.items" @open="router.push(`/team/${teamId}/item/${$event.id}`)" @status="changeStatus" />
     </section>
   </main>
 </template>
-

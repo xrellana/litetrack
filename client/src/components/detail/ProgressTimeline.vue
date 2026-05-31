@@ -1,6 +1,7 @@
 <script setup>
 import { Send, Plus, X } from 'lucide-vue-next';
 import { reactive, ref, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import UserAvatar from '../common/UserAvatar.vue';
 import { STATUSES } from '../../stores/items';
 
@@ -10,6 +11,7 @@ defineProps({
 });
 
 const emit = defineEmits(['submit']);
+const { t, te } = useI18n();
 const form = reactive({ content: '', status: '' });
 const showForm = ref(false);
 const inputRef = ref(null);
@@ -35,20 +37,31 @@ function submit() {
   });
   closeForm();
 }
+
+function statusLabel(status) {
+  const key = `status.${status}`;
+  return te(key) ? t(key) : status;
+}
+
+function statusChangeLabel(change) {
+  const [from, to] = String(change).split('->');
+  if (!from || !to) return change;
+  return t('updates.statusChanged', { from: statusLabel(from), to: statusLabel(to) });
+}
 </script>
 
 <template>
   <section class="stack">
     <div v-if="!showForm" class="add-update-trigger">
       <button class="button add-button" type="button" @click="openForm">
-        <Plus :size="18" /> Add Progress Update
+        <Plus :size="18" /> {{ $t('updates.add') }}
       </button>
     </div>
 
     <form v-if="showForm" class="update-form panel" @submit.prevent="submit">
       <div class="form-header">
-        <strong>New Update</strong>
-        <button class="button icon secondary ghost" type="button" @click="closeForm" title="Cancel">
+        <strong>{{ $t('updates.new') }}</strong>
+        <button class="button icon secondary ghost" type="button" @click="closeForm" :title="$t('common.cancel')">
           <X :size="18" />
         </button>
       </div>
@@ -58,7 +71,7 @@ function submit() {
           ref="inputRef"
           v-model="form.content" 
           class="modern-textarea" 
-          placeholder="What's the latest progress on this item?" 
+          :placeholder="$t('updates.placeholder')" 
           maxlength="5000" 
           required 
         />
@@ -67,14 +80,14 @@ function submit() {
       <div class="form-footer">
         <div class="modern-select-wrapper">
           <select v-model="form.status" class="modern-select">
-            <option value="">Keep current status</option>
-            <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ status.label }}</option>
+            <option value="">{{ $t('updates.keepStatus') }}</option>
+            <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ $t(`status.${status.value}`) }}</option>
           </select>
         </div>
         <div class="actions">
-          <button class="button secondary" type="button" @click="closeForm">Cancel</button>
+          <button class="button secondary" type="button" @click="closeForm">{{ $t('common.cancel') }}</button>
           <button class="button" type="submit" :disabled="busy">
-            <Send :size="17" /> Post
+            <Send :size="17" /> {{ $t('updates.post') }}
           </button>
         </div>
       </div>
@@ -86,13 +99,13 @@ function submit() {
           <UserAvatar :user="update.user" />
           <span>
             <strong>{{ update.user?.display_name }}</strong>
-            <small class="muted" style="display:block">{{ new Date(update.created_at).toLocaleString() }}</small>
+            <small class="muted" style="display:block">{{ new Date(update.created_at).toLocaleString($i18n.locale) }}</small>
           </span>
         </div>
         <p class="update-content">{{ update.content }}</p>
-        <small v-if="update.status_change" class="badge update-badge">{{ update.status_change }}</small>
+        <small v-if="update.status_change" class="badge update-badge">{{ statusChangeLabel(update.status_change) }}</small>
       </article>
-      <div v-if="!updates.length" class="empty compact">No progress updates yet.</div>
+      <div v-if="!updates.length" class="empty compact">{{ $t('updates.none') }}</div>
     </div>
   </section>
 </template>

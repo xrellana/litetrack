@@ -32,16 +32,16 @@ onMounted(async () => {
   <main class="page-shell">
     <AppHeader />
     <section class="section">
-      <div v-if="loading" class="empty">Loading...</div>
+      <div v-if="loading" class="empty">{{ $t('common.loading') }}</div>
       <div v-else-if="error" class="error-box">{{ error }}</div>
 
       <template v-else>
         <div class="panel" style="padding:48px 32px;text-align:center;display:grid;gap:24px;place-items:center">
           <Users :size="56" style="color:var(--subtle)" />
           <div>
-            <h1 style="margin:0 0 10px;font-size:1.5rem">Welcome to LiteTrack, {{ auth.user?.display_name || auth.user?.username }}</h1>
+            <h1 style="margin:0 0 10px;font-size:1.5rem">{{ $t('home.welcome', { name: auth.user?.display_name || auth.user?.username }) }}</h1>
             <p class="muted" style="margin:0;max-width:480px">
-              You're not assigned to any team yet. Ask an instance admin to add you to a team.
+              {{ $t('home.noTeams') }}
             </p>
           </div>
         </div>

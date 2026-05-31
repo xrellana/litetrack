@@ -1,6 +1,6 @@
 <template>
   <div class="language-switcher">
-    <select v-model="$i18n.locale" class="lang-select">
+    <select v-model="$i18n.locale" class="lang-select" :aria-label="$t('nav.switchLang')" :title="$t('nav.switchLang')">
       <option value="en">English</option>
       <option value="zh-CN">简体中文</option>
     </select>

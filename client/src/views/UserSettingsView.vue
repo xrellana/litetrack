@@ -33,8 +33,8 @@ async function saveProfile() {
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">Settings</h1>
-          <p class="muted">Your account preferences.</p>
+          <h1 class="page-title">{{ $t('settings.title') }}</h1>
+          <p class="muted">{{ $t('settings.description') }}</p>
         </div>
       </div>
 
@@ -43,29 +43,29 @@ async function saveProfile() {
       <form class="panel stack" style="padding:24px;max-width:560px" @submit.prevent="saveProfile">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
           <User :size="20" style="color:var(--muted)" />
-          <h2 style="margin:0;font-size:1.1rem">Profile</h2>
+          <h2 style="margin:0;font-size:1.1rem">{{ $t('settings.profile') }}</h2>
         </div>
 
         <label class="field">
-          <span>Display name</span>
+          <span>{{ $t('auth.displayName') }}</span>
           <input v-model="displayName" class="input" maxlength="80" required :disabled="busy" />
         </label>
 
         <label class="field">
-          <span>Username</span>
+          <span>{{ $t('common.username') }}</span>
           <input class="input" :value="auth.user?.username" disabled style="opacity:0.55" />
         </label>
 
         <label class="field">
-          <span>Email</span>
+          <span>{{ $t('common.email') }}</span>
           <input class="input" :value="auth.user?.email" disabled style="opacity:0.55" />
         </label>
 
         <div style="display:flex;align-items:center;gap:12px">
           <button class="button" type="submit" :disabled="busy">
-            <Save :size="17" /> Save
+            <Save :size="17" /> {{ $t('common.save') }}
           </button>
-          <span v-if="saved" style="color:var(--success);font-size:0.9rem">Saved</span>
+          <span v-if="saved" style="color:var(--success);font-size:0.9rem">{{ $t('common.saved') }}</span>
         </div>
       </form>
     </section>

@@ -4,12 +4,11 @@ import { useRoute, useRouter } from 'vue-router';
 import { BriefcaseBusiness, ListTodo, Plus, SlidersHorizontal } from 'lucide-vue-next';
 import AppHeader from '../components/layout/AppHeader.vue';
 import FilterBar from '../components/layout/FilterBar.vue';
-import ActivityFeed from '../components/detail/ActivityFeed.vue';
 import CreateItemModal from '../components/items/CreateItemModal.vue';
 import ItemList from '../components/items/ItemList.vue';
 import { useRealtime } from '../composables/useRealtime';
 import { useAuthStore } from '../stores/auth';
-import { useItemsStore, STATUSES } from '../stores/items';
+import { useItemsStore } from '../stores/items';
 import { useTeamsStore } from '../stores/teams';
 
 const route = useRoute();
@@ -160,36 +159,36 @@ watch(() => route.query, () => {
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">{{ mineOnly ? 'My Items' : 'Work' }}</h1>
+          <h1 class="page-title">{{ mineOnly ? $t('work.myItems') : $t('work.title') }}</h1>
           <p class="muted">
-            {{ mineOnly ? 'Assigned work across every team you belong to.' : 'All tracking items across your teams, filtered in one place.' }}
+            {{ mineOnly ? $t('work.mineDescription') : $t('work.allDescription') }}
           </p>
         </div>
         <div class="toolbar">
-          <div class="segmented" aria-label="Work scope">
+          <div class="segmented" :aria-label="$t('work.scopeAria')">
             <button class="segment" :class="{ active: !mineOnly }" type="button" @click="setScope('all')">
-              <BriefcaseBusiness :size="16" /> All Work
+              <BriefcaseBusiness :size="16" /> {{ $t('work.allWork') }}
             </button>
             <button class="segment" :class="{ active: mineOnly }" type="button" @click="setScope('mine')">
-              <ListTodo :size="16" /> Mine
+              <ListTodo :size="16" /> {{ $t('work.mine') }}
             </button>
           </div>
           <button class="button" type="button" :disabled="!teams.teams.length" @click="openCreate">
-            <Plus :size="17" /> New Item
+            <Plus :size="17" /> {{ $t('work.newItem') }}
           </button>
         </div>
       </div>
 
 
       <div class="team-filter-strip panel">
-        <span class="team-filter-label"><SlidersHorizontal :size="16" /> Teams</span>
+        <span class="team-filter-label"><SlidersHorizontal :size="16" /> {{ $t('work.teams') }}</span>
         <button
           class="team-filter-chip"
           :class="{ active: !selectedTeamIds.length }"
           type="button"
           @click="router.replace({ query: { ...route.query, teams: undefined } })"
         >
-          All teams
+          {{ $t('work.allTeams') }}
         </button>
         <button
           v-for="team in teams.teams"
@@ -212,7 +211,7 @@ watch(() => route.query, () => {
       />
 
       <div v-if="items.error" class="error-box">{{ items.error }}</div>
-      <div v-if="items.loading || !loaded" class="empty">Loading work...</div>
+      <div v-if="items.loading || !loaded" class="empty">{{ $t('work.loading') }}</div>
       <template v-else-if="teams.teams.length">
         <ItemList
           :items="items.items"
@@ -224,7 +223,7 @@ watch(() => route.query, () => {
       <div v-else class="empty">
         <span>
           <BriefcaseBusiness :size="32" style="display:block;margin:0 auto 10px;color:var(--subtle)" />
-          You are not assigned to any teams yet. Ask an instance admin to add you to a team.
+          {{ $t('work.noTeams') }}
         </span>
       </div>
 

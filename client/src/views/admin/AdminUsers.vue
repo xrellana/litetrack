@@ -1,11 +1,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch, nextTick } from 'vue';
 import { Pencil, Save, ShieldCheck, Trash2, UserPlus, X, Users, Mail, UserCog, Network, Plus, ChevronDown, ChevronUp, Key } from 'lucide-vue-next';
+import { useI18n } from 'vue-i18n';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
 import { useAdminStore } from '../../stores/admin';
 import { useAuthStore } from '../../stores/auth';
 
+const { t } = useI18n();
 const admin = useAdminStore();
 const auth = useAuthStore();
 
@@ -64,15 +66,15 @@ async function createUser() {
 
 async function deleteUser(user) {
   if (user.id === auth.user?.id) {
-    alert("You cannot delete yourself.");
+    alert(t('admin.deleteSelf'));
     return;
   }
-  if (!window.confirm(`Are you absolutely sure you want to delete user ${user.display_name}?`)) return;
+  if (!window.confirm(t('admin.deleteUserConfirm', { name: user.display_name }))) return;
   
   try {
     await admin.deleteUser(user.id);
   } catch (error) {
-    alert(error.message);
+    alert(error.message === 'Cannot delete user with existing activity or owned teams.' ? t('admin.deleteUserConflict') : error.message);
   }
 }
 
@@ -132,7 +134,7 @@ async function changeRole(teamId, userId, role) {
 }
 
 async function removeMember(teamId, user) {
-  if (!window.confirm(`Remove ${user.display_name} from this team?`)) return;
+  if (!window.confirm(t('teams.removeMemberConfirm', { name: user.display_name }))) return;
   await admin.removeMember(teamId, user.id);
 }
 
@@ -167,14 +169,14 @@ onMounted(() => {
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">Users Management</h1>
-          <p class="muted">Instance-wide user directory.</p>
+          <h1 class="page-title">{{ $t('admin.usersManagement') }}</h1>
+          <p class="muted">{{ $t('admin.usersManagementDescription') }}</p>
         </div>
-        <span class="badge in_progress"><ShieldCheck :size="14" /> Instance admin</span>
+        <span class="badge in_progress"><ShieldCheck :size="14" /> {{ $t('admin.instanceAdmin') }}</span>
       </div>
 
       <div v-if="admin.error" class="error-box">{{ admin.error }}</div>
-      <div v-if="admin.loading && !admin.users.length" class="empty">Loading users...</div>
+      <div v-if="admin.loading && !admin.users.length" class="empty">{{ $t('admin.loadingUsers') }}</div>
 
       <template v-else>
         <div class="admin-dashboard">
@@ -182,10 +184,10 @@ onMounted(() => {
           <div class="dashboard-header-row">
             <div class="dashboard-stat-chip">
               <Users :size="18" />
-              <strong>{{ admin.users.length }}</strong> Users
+              <span>{{ $t('admin.usersCount', { count: admin.users.length }) }}</span>
             </div>
             <button v-if="!showCreateForm" class="button primary-gradient" @click="showCreateForm = true">
-              <UserPlus :size="17" /> Create New User
+              <UserPlus :size="17" /> {{ $t('admin.createNewUser') }}
             </button>
           </div>
 
@@ -193,9 +195,9 @@ onMounted(() => {
             <div class="card-header">
               <div class="card-title-group">
                 <div class="icon-box success"><UserPlus :size="20" /></div>
-                <h3>Create New User</h3>
+                <h3>{{ $t('admin.createNewUser') }}</h3>
               </div>
-              <button class="button icon ghost" type="button" @click="showCreateForm = false" title="Cancel">
+              <button class="button icon ghost" type="button" @click="showCreateForm = false" :title="$t('common.cancel')">
                 <X :size="17" />
               </button>
             </div>
@@ -203,27 +205,27 @@ onMounted(() => {
             <div class="card-body">
               <div class="form-grid">
                 <label class="field">
-                  <span>Username</span>
-                  <input ref="userNameInput" v-model="createForm.username" class="input" minlength="3" maxlength="32" placeholder="e.g. jdoe" required />
+                  <span>{{ $t('common.username') }}</span>
+                  <input ref="userNameInput" v-model="createForm.username" class="input" minlength="3" maxlength="32" :placeholder="$t('admin.usernamePlaceholder')" required />
                 </label>
                 <label class="field">
-                  <span>Display Name</span>
-                  <input v-model="createForm.display_name" class="input" placeholder="e.g. John Doe" maxlength="80" />
+                  <span>{{ $t('admin.displayName') }}</span>
+                  <input v-model="createForm.display_name" class="input" :placeholder="$t('admin.displayNamePlaceholder')" maxlength="80" />
                 </label>
                 <label class="field">
-                  <span>Email</span>
-                  <input v-model="createForm.email" class="input" type="email" placeholder="e.g. jdoe@example.com" required />
+                  <span>{{ $t('common.email') }}</span>
+                  <input v-model="createForm.email" class="input" type="email" :placeholder="$t('admin.emailPlaceholder')" required />
                 </label>
                 <label class="field">
-                  <span>Password</span>
-                  <input v-model="createForm.password" class="input" type="password" placeholder="Min 8 characters" minlength="8" required />
+                  <span>{{ $t('common.password') }}</span>
+                  <input v-model="createForm.password" class="input" type="password" :placeholder="$t('admin.passwordPlaceholder')" minlength="8" required />
                 </label>
               </div>
             </div>
             <div class="card-footer">
-              <button class="button secondary" type="button" @click="showCreateForm = false">Cancel</button>
+              <button class="button secondary" type="button" @click="showCreateForm = false">{{ $t('common.cancel') }}</button>
               <button class="button success-gradient" type="submit" :disabled="creating || admin.loading">
-                <UserPlus :size="17" /> Create User
+                <UserPlus :size="17" /> {{ $t('admin.createUser') }}
               </button>
             </div>
           </form>
@@ -233,10 +235,10 @@ onMounted(() => {
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Account</th>
-                    <th>Role</th>
-                    <th>Teams</th>
+                    <th>{{ $t('admin.userTable.user') }}</th>
+                    <th>{{ $t('admin.userTable.account') }}</th>
+                    <th>{{ $t('admin.userTable.role') }}</th>
+                    <th>{{ $t('admin.userTable.teams') }}</th>
                     <th class="actions-col"></th>
                   </tr>
                 </thead>
@@ -255,7 +257,7 @@ onMounted(() => {
                           <div class="user-details">
                             <strong class="user-name">
                               {{ user.display_name }}
-                              <span v-if="user.id === auth.user?.id" class="badge primary micro">You</span>
+                              <span v-if="user.id === auth.user?.id" class="badge primary micro">{{ $t('admin.you') }}</span>
                             </strong>
                             <span class="user-email"><Mail :size="12"/> {{ user.email }}</span>
                           </div>
@@ -265,19 +267,19 @@ onMounted(() => {
                         <span class="muted">@{{ user.username }}</span>
                       </td>
                       <td>
-                        <span v-if="user.is_instance_admin" class="badge violet"><UserCog :size="12"/> Admin</span>
-                        <span v-else class="badge todo">User</span>
+                        <span v-if="user.is_instance_admin" class="badge violet"><UserCog :size="12"/> {{ $t('roles.admin') }}</span>
+                        <span v-else class="badge todo">{{ $t('roles.user') }}</span>
                       </td>
                       <td>
                         <div class="teams-cell">
-                          <span v-if="user.is_instance_admin" class="muted text-sm">Global</span>
-                          <span v-else-if="user.memberships.length === 0" class="muted text-sm">None</span>
-                          <span v-else class="badge success">{{ user.memberships.length }} Teams</span>
+                          <span v-if="user.is_instance_admin" class="muted text-sm">{{ $t('common.global') }}</span>
+                          <span v-else-if="user.memberships.length === 0" class="muted text-sm">{{ $t('common.none') }}</span>
+                          <span v-else class="badge success">{{ $t('admin.teamsCount', { count: user.memberships.length }) }}</span>
                         </div>
                       </td>
                       <td class="actions-col">
                         <div class="row-actions" @click.stop>
-                          <button v-if="user.id !== auth.user?.id" class="button icon danger ghost" type="button" title="Delete user" @click="deleteUser(user)">
+                          <button v-if="user.id !== auth.user?.id" class="button icon danger ghost" type="button" :title="$t('admin.deleteUser')" @click="deleteUser(user)">
                             <Trash2 :size="16" />
                           </button>
                           <button class="button icon ghost" type="button" @click="toggleExpand(user)">
@@ -297,21 +299,21 @@ onMounted(() => {
                           <div class="panel-section edit-section">
                             <div class="section-header-small">
                               <Pencil :size="16" class="section-icon" />
-                              <h4>Edit Profile</h4>
+                              <h4>{{ $t('admin.editProfile') }}</h4>
                             </div>
                             
                             <form @submit.prevent="submitEdit(user)" class="edit-form-grid">
                               <div v-if="editError" class="error-box full-width">{{ editError }}</div>
                               <label class="field">
-                                <span>Display name</span>
+                                <span>{{ $t('auth.displayName') }}</span>
                                 <input v-model="editForm.display_name" class="input" maxlength="80" required :disabled="editing" />
                               </label>
                               <label class="field">
-                                <span>Email</span>
+                                <span>{{ $t('common.email') }}</span>
                                 <input v-model="editForm.email" class="input" type="email" required :disabled="editing" />
                               </label>
                               <label class="field">
-                                <span>New password (optional)</span>
+                                <span>{{ $t('admin.newPasswordOptional') }}</span>
                                 <div class="input-with-icon">
                                   <Key :size="16" class="input-icon" />
                                   <input
@@ -320,7 +322,7 @@ onMounted(() => {
                                     type="password"
                                     minlength="8"
                                     autocomplete="new-password"
-                                    placeholder="Leave blank to keep current"
+                                    :placeholder="$t('admin.keepPasswordPlaceholder')"
                                     :disabled="editing"
                                     style="padding-left: 36px;"
                                   />
@@ -328,7 +330,7 @@ onMounted(() => {
                               </label>
                               <div class="edit-actions">
                                 <button class="button success-gradient" type="submit" :disabled="editing || admin.loading">
-                                  <Save :size="16" /> Save Changes
+                                  <Save :size="16" /> {{ $t('admin.saveChanges') }}
                                 </button>
                               </div>
                             </form>
@@ -340,15 +342,15 @@ onMounted(() => {
                           <div class="panel-section memberships-section">
                             <div class="section-header-small">
                               <Network :size="16" class="section-icon" />
-                              <h4>Team Memberships</h4>
+                              <h4>{{ $t('admin.teamMemberships') }}</h4>
                               <button v-if="!user.is_instance_admin && assigningUserId !== user.id" class="button secondary small-btn" @click="startAssign(user.id)" style="margin-left:auto">
-                                <Plus :size="14" /> Assign
+                                <Plus :size="14" /> {{ $t('admin.assign') }}
                               </button>
                             </div>
 
                             <div v-if="user.is_instance_admin" class="empty-state-small">
                               <ShieldCheck :size="24" class="muted-icon" />
-                              <p>Instance admins have global access to all teams.</p>
+                              <p>{{ $t('admin.instanceAdminGlobal') }}</p>
                             </div>
 
                             <div v-else>
@@ -356,14 +358,14 @@ onMounted(() => {
                               <div v-if="assigningUserId === user.id" class="assign-form">
                                 <form @submit.prevent="assignUser(user)" class="form-inline">
                                   <select v-model="assignForm.team_id" class="select" style="flex:1" required>
-                                    <option value="" disabled>Select team...</option>
+                                    <option value="" disabled>{{ $t('admin.selectTeam') }}</option>
                                     <option v-for="team in availableTeams(user)" :key="team.id" :value="team.id">{{ team.name }}</option>
                                   </select>
                                   <select v-model="assignForm.role" class="select" style="width:100px" required>
-                                    <option value="admin">Admin</option>
-                                    <option value="member">Member</option>
+                                    <option value="admin">{{ $t('roles.admin') }}</option>
+                                    <option value="member">{{ $t('roles.member') }}</option>
                                   </select>
-                                  <button class="button primary" type="submit">Add</button>
+                                  <button class="button primary" type="submit">{{ $t('common.add') }}</button>
                                   <button class="button icon ghost" type="button" @click="cancelAssign"><X :size="16"/></button>
                                 </form>
                               </div>
@@ -378,15 +380,15 @@ onMounted(() => {
                                     :value="membership.role"
                                     @change="changeRole(membership.team_id, user.id, $event.target.value)"
                                   >
-                                    <option value="admin">Admin</option>
-                                    <option value="member">Member</option>
+                                    <option value="admin">{{ $t('roles.admin') }}</option>
+                                    <option value="member">{{ $t('roles.member') }}</option>
                                   </select>
-                                  <button class="button icon ghost danger-hover chip-remove" title="Remove from team" @click="removeMember(membership.team_id, user)">
+                                  <button class="button icon ghost danger-hover chip-remove" :title="$t('teams.removeMember')" @click="removeMember(membership.team_id, user)">
                                     <X :size="14" />
                                   </button>
                                 </div>
                                 <div v-if="!user.memberships.length && assigningUserId !== user.id" class="empty-state-small">
-                                  <p>Not assigned to any teams.</p>
+                                  <p>{{ $t('admin.notAssigned') }}</p>
                                 </div>
                               </div>
                             </div>
@@ -400,7 +402,7 @@ onMounted(() => {
                   </template>
                 </tbody>
               </table>
-              <div v-if="!admin.users.length" class="empty" style="min-height: 120px;">No users found.</div>
+              <div v-if="!admin.users.length" class="empty" style="min-height: 120px;">{{ $t('admin.noUsers') }}</div>
             </div>
           </div>
 

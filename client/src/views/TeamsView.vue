@@ -31,19 +31,19 @@ onMounted(async () => {
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">Teams</h1>
+          <h1 class="page-title">{{ $t('teams.title') }}</h1>
           <p class="muted">
-            Teams you administer. Review team details or jump straight into team-scoped work.
+            {{ $t('teams.description') }}
           </p>
         </div>
         <RouterLink class="button secondary" :to="{ name: 'work' }">
-          <BriefcaseBusiness :size="17" /> Work
+          <BriefcaseBusiness :size="17" /> {{ $t('work.title') }}
         </RouterLink>
       </div>
 
       <div v-if="error" class="error-box">{{ error }}</div>
 
-      <div v-if="teams.loading || !loaded" class="empty">Loading teams...</div>
+      <div v-if="teams.loading || !loaded" class="empty">{{ $t('teams.loading') }}</div>
       <div v-else-if="adminTeams.length" class="team-list panel">
         <article
           v-for="team in adminTeams"
@@ -52,24 +52,24 @@ onMounted(async () => {
         >
           <div>
             <strong style="font-size:1.18rem">{{ team.name }}</strong>
-            <small class="muted" style="display:block">{{ team.description || 'No description' }}</small>
+            <small class="muted" style="display:block">{{ team.description || $t('teams.noDescription') }}</small>
           </div>
           <div class="item-meta">
-            <span class="badge in_progress">team admin</span>
-            <span class="muted">{{ team.member_count }} members</span>
+            <span class="badge in_progress">{{ $t('teams.teamAdmin') }}</span>
+            <span class="muted">{{ $t('teams.membersCount', { count: team.member_count }) }}</span>
           </div>
           <div class="team-row-actions">
             <RouterLink class="button secondary" :to="{ name: 'work', query: { teams: team.id } }">
-              <BriefcaseBusiness :size="17" /> Work
+              <BriefcaseBusiness :size="17" /> {{ $t('work.title') }}
             </RouterLink>
             <RouterLink class="button" :to="{ name: 'team-manage', params: { id: team.id } }">
-              <Settings :size="17" /> Settings
+              <Settings :size="17" /> {{ $t('common.settings') }}
             </RouterLink>
           </div>
         </article>
       </div>
       <div v-else class="empty">
-        Team administration is only available for teams where you are an admin.
+        {{ $t('teams.adminOnly') }}
       </div>
     </section>
   </main>

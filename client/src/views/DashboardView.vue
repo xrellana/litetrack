@@ -93,15 +93,15 @@ watch(() => route.query, () => items.fetchItems(teamId.value, filters.value), { 
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">{{ teams.activeTeam?.name || 'Team' }}</h1>
-          <p class="muted">{{ teams.activeTeam?.description || 'Team work items by status.' }}</p>
+          <h1 class="page-title">{{ teams.activeTeam?.name || $t('common.team') }}</h1>
+          <p class="muted">{{ teams.activeTeam?.description || $t('work.allDescription') }}</p>
         </div>
         <div class="toolbar">
           <RouterLink v-if="teams.isAdmin" class="button secondary" :to="{ name: 'team-manage', params: { id: teamId } }">
-            <Settings :size="17" /> Team Settings
+            <Settings :size="17" /> {{ $t('teams.settingsTitle') }}
           </RouterLink>
           <button class="button" type="button" @click="openCreate">
-            <Plus :size="17" /> New Item
+            <Plus :size="17" /> {{ $t('work.newItem') }}
           </button>
         </div>
       </div>
@@ -113,7 +113,7 @@ watch(() => route.query, () => items.fetchItems(teamId.value, filters.value), { 
         @reset="resetFilters"
       />
       <div v-if="items.error" class="error-box">{{ items.error }}</div>
-      <div v-if="items.loading" class="empty">Loading items...</div>
+      <div v-if="items.loading" class="empty">{{ $t('items.loadingItems') }}</div>
       <template v-else>
         <ItemList :items="items.items" @open="router.push(`/team/${teamId}/item/${$event.id}`)" @status="changeStatus" />
       </template>
@@ -121,12 +121,12 @@ watch(() => route.query, () => items.fetchItems(teamId.value, filters.value), { 
       <section class="team-activity-section">
         <div class="section-header">
           <div>
-            <h2 class="section-title">Recent activity</h2>
-            <p class="muted">Latest item, member, tag, and comment updates for this team.</p>
+            <h2 class="section-title">{{ $t('activity.teamRecentTitle') }}</h2>
+            <p class="muted">{{ $t('activity.teamRecentDescription') }}</p>
           </div>
         </div>
         <div v-if="activity.error" class="error-box">{{ activity.error }}</div>
-        <div v-else-if="activity.loading" class="empty compact">Loading activity...</div>
+        <div v-else-if="activity.loading" class="empty compact">{{ $t('activity.loading') }}</div>
         <ActivityFeed v-else :rows="activity.rows" />
       </section>
     </section>

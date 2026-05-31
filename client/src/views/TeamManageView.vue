@@ -3,11 +3,13 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Plus, Save, ShieldAlert, Trash2 } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import AppHeader from '../components/layout/AppHeader.vue';
 import UserAvatar from '../components/common/UserAvatar.vue';
 import { useRealtime } from '../composables/useRealtime';
 import { useTeamsStore } from '../stores/teams';
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const teams = useTeamsStore();
@@ -88,7 +90,7 @@ async function addMember() {
 
 async function removeMember(member) {
   if (!canManage.value) return;
-  if (!window.confirm(`Remove ${member.user.display_name} from this team?`)) return;
+  if (!window.confirm(t('teams.removeMemberConfirm', { name: member.user.display_name }))) return;
   await teams.removeMemberFromTeam(teamId.value, member.user_id);
 }
 
@@ -100,19 +102,19 @@ onMounted(load);
     <AppHeader />
     <section class="section">
       <!-- While checking permissions, show loading -->
-      <div v-if="!loaded" class="empty">Loading...</div>
+      <div v-if="!loaded" class="empty">{{ $t('common.loading') }}</div>
 
       <!-- Non-admin: never renders the form, shows redirect notice briefly -->
       <template v-else-if="!canManage">
         <div class="section-header">
           <div>
-            <h1 class="page-title">Team Settings</h1>
-            <p class="muted">You don't have permission to manage this team.</p>
+            <h1 class="page-title">{{ $t('teams.settingsTitle') }}</h1>
+            <p class="muted">{{ $t('teams.noManagePermission') }}</p>
           </div>
         </div>
         <div class="panel" style="padding:24px;display:flex;align-items:center;gap:12px;border-color:rgba(245,158,11,0.28)">
           <ShieldAlert :size="22" style="color:var(--warning);flex-shrink:0" />
-          <span>Only team <strong>admins</strong> can access team management. Redirecting to Work...</span>
+          <span>{{ $t('teams.redirectNotice') }}</span>
         </div>
       </template>
 
@@ -120,8 +122,8 @@ onMounted(load);
       <template v-else>
         <div class="section-header">
           <div>
-            <h1 class="page-title">Team Settings</h1>
-            <p class="muted">Manage team profile and members.</p>
+            <h1 class="page-title">{{ $t('teams.settingsTitle') }}</h1>
+            <p class="muted">{{ $t('teams.settingsDescription') }}</p>
           </div>
         </div>
 
@@ -130,36 +132,36 @@ onMounted(load);
         <div class="settings-grid">
           <section class="stack">
             <form class="panel stack" style="padding:18px" @submit.prevent="saveTeam">
-              <h2 style="margin:0">Team info</h2>
+              <h2 style="margin:0">{{ $t('teams.teamInfo') }}</h2>
               <label class="field">
-                <span>Name</span>
+                <span>{{ $t('common.name') }}</span>
                 <input v-model="teamForm.name" class="input" maxlength="80" required />
               </label>
               <label class="field">
-                <span>Description</span>
+                <span>{{ $t('common.description') }}</span>
                 <textarea v-model="teamForm.description" class="textarea" maxlength="5000" />
               </label>
               <button class="button" type="submit" :disabled="busy">
-                <Save :size="17" /> Save
+                <Save :size="17" /> {{ $t('common.save') }}
               </button>
             </form>
 
             <section class="panel stack" style="padding:18px">
-              <h2 style="margin:0">Members</h2>
+              <h2 style="margin:0">{{ $t('teams.members') }}</h2>
               <form class="member-add-form" @submit.prevent="addMember">
                 <label class="field" style="min-width:220px;flex:1">
-                  <span>Username or email</span>
+                  <span>{{ $t('common.usernameOrEmail') }}</span>
                   <input v-model="addMemberForm.identifier" class="input" required maxlength="254" placeholder="name@example.com" />
                 </label>
                 <label class="field" style="width:140px">
-                  <span>Role</span>
+                  <span>{{ $t('common.role') }}</span>
                   <select v-model="addMemberForm.role" class="select">
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    <option value="member">{{ $t('roles.member') }}</option>
+                    <option value="admin">{{ $t('roles.admin') }}</option>
                   </select>
                 </label>
                 <button class="button" type="submit" :disabled="adding">
-                  <Plus :size="17" /> Add
+                  <Plus :size="17" /> {{ $t('common.add') }}
                 </button>
               </form>
               <div v-for="member in teams.members" :key="member.user_id" class="activity-row">
@@ -178,13 +180,13 @@ onMounted(load);
                       :value="member.role"
                       @change="changeRole(member, $event.target.value)"
                     >
-                      <option value="admin">Admin</option>
-                      <option value="member">Member</option>
+                      <option value="admin">{{ $t('roles.admin') }}</option>
+                      <option value="member">{{ $t('roles.member') }}</option>
                     </select>
                     <button
                       class="button icon danger"
                       type="button"
-                      title="Remove member"
+                      :title="$t('teams.removeMember')"
                       @click="removeMember(member)"
                     >
                       <Trash2 :size="17" />

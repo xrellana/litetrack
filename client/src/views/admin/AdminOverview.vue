@@ -16,26 +16,26 @@ onMounted(() => admin.fetchOverview());
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">Admin Console</h1>
-          <p class="muted">Instance-wide overview and system management.</p>
+          <h1 class="page-title">{{ $t('admin.consoleTitle') }}</h1>
+          <p class="muted">{{ $t('admin.consoleDescription') }}</p>
         </div>
-        <span class="badge in_progress"><ShieldCheck :size="14" /> Instance admin</span>
+        <span class="badge in_progress"><ShieldCheck :size="14" /> {{ $t('admin.instanceAdmin') }}</span>
       </div>
 
       <div v-if="admin.error" class="error-box">{{ admin.error }}</div>
-      <div v-if="admin.loading" class="empty">Loading instance overview...</div>
+      <div v-if="admin.loading" class="empty">{{ $t('admin.loadingOverview') }}</div>
 
       <template v-else>
         <div class="admin-dashboard">
           
           <div class="dashboard-stats">
-            <h2 class="section-title">System Overview</h2>
+            <h2 class="section-title">{{ $t('admin.systemOverview') }}</h2>
             <div class="stat-grid">
               <div class="stat-card primary">
                 <div class="stat-icon"><Network :size="24" /></div>
                 <div class="stat-info">
                   <span class="stat-value">{{ admin.summary.teams }}</span>
-                  <span class="stat-label">Active Teams</span>
+                  <span class="stat-label">{{ $t('admin.activeTeams') }}</span>
                 </div>
               </div>
               
@@ -43,7 +43,7 @@ onMounted(() => admin.fetchOverview());
                 <div class="stat-icon"><Users :size="24" /></div>
                 <div class="stat-info">
                   <span class="stat-value">{{ admin.summary.users }}</span>
-                  <span class="stat-label">Total Users</span>
+                  <span class="stat-label">{{ $t('admin.totalUsers') }}</span>
                 </div>
               </div>
               
@@ -51,7 +51,7 @@ onMounted(() => admin.fetchOverview());
                 <div class="stat-icon"><Activity :size="24" /></div>
                 <div class="stat-info">
                   <span class="stat-value">{{ admin.summary.memberships }}</span>
-                  <span class="stat-label">Memberships</span>
+                  <span class="stat-label">{{ $t('admin.memberships') }}</span>
                 </div>
               </div>
               
@@ -59,20 +59,20 @@ onMounted(() => admin.fetchOverview());
                 <div class="stat-icon"><UserCog :size="24" /></div>
                 <div class="stat-info">
                   <span class="stat-value">{{ admin.summary.instance_admins }}</span>
-                  <span class="stat-label">Instance Admins</span>
+                  <span class="stat-label">{{ $t('admin.instanceAdmins') }}</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="dashboard-actions">
-            <h2 class="section-title">Quick Actions</h2>
+            <h2 class="section-title">{{ $t('admin.quickActions') }}</h2>
             <div class="action-cards">
               <RouterLink :to="{ name: 'admin-teams' }" class="action-card">
                 <div class="action-icon primary"><Network :size="20" /></div>
                 <div class="action-content">
-                  <h3>Manage Teams</h3>
-                  <p class="muted">Create, edit, or remove teams and manage their settings across the instance.</p>
+                  <h3>{{ $t('admin.manageTeams') }}</h3>
+                  <p class="muted">{{ $t('admin.manageTeamsDescription') }}</p>
                 </div>
                 <div class="action-arrow"><ArrowRight :size="18" /></div>
               </RouterLink>
@@ -80,8 +80,8 @@ onMounted(() => admin.fetchOverview());
               <RouterLink :to="{ name: 'admin-users' }" class="action-card">
                 <div class="action-icon success"><Users :size="20" /></div>
                 <div class="action-content">
-                  <h3>Manage Users</h3>
-                  <p class="muted">Invite new users, assign global roles, and manage user access levels.</p>
+                  <h3>{{ $t('admin.manageUsers') }}</h3>
+                  <p class="muted">{{ $t('admin.manageUsersDescription') }}</p>
                 </div>
                 <div class="action-arrow"><ArrowRight :size="18" /></div>
               </RouterLink>
@@ -89,23 +89,23 @@ onMounted(() => admin.fetchOverview());
           </div>
           
           <div class="dashboard-system">
-            <h2 class="section-title">System Status</h2>
+            <h2 class="section-title">{{ $t('admin.systemStatus') }}</h2>
             <div class="system-panel">
               <div class="system-row">
                 <div class="system-indicator online"><Activity :size="16" /></div>
                 <div class="system-detail">
-                  <strong>API Services</strong>
-                  <span class="muted">All endpoints operational</span>
+                  <strong>{{ $t('admin.apiServices') }}</strong>
+                  <span class="muted">{{ $t('admin.apiServicesDescription') }}</span>
                 </div>
-                <span class="badge done">Online</span>
+                <span class="badge done">{{ $t('common.online') }}</span>
               </div>
               <div class="system-row">
                 <div class="system-indicator online"><Database :size="16" /></div>
                 <div class="system-detail">
-                  <strong>Database Cluster</strong>
-                  <span class="muted">Connected and healthy</span>
+                  <strong>{{ $t('admin.databaseCluster') }}</strong>
+                  <span class="muted">{{ $t('admin.databaseDescription') }}</span>
                 </div>
-                <span class="badge done">Online</span>
+                <span class="badge done">{{ $t('common.online') }}</span>
               </div>
             </div>
           </div>

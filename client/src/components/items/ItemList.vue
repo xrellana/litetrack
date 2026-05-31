@@ -16,12 +16,12 @@ const emit = defineEmits(['open', 'status']);
     <table class="list-table">
       <thead>
         <tr>
-          <th>Item</th>
-          <th v-if="showTeam">Team</th>
-          <th>Status</th>
-          <th>Priority</th>
-          <th>Assignee</th>
-          <th>Due</th>
+          <th>{{ $t('items.item') }}</th>
+          <th v-if="showTeam">{{ $t('common.team') }}</th>
+          <th>{{ $t('items.status') }}</th>
+          <th>{{ $t('items.priority') }}</th>
+          <th>{{ $t('items.assignee') }}</th>
+          <th>{{ $t('items.due') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -33,7 +33,7 @@ const emit = defineEmits(['open', 'status']);
             </div>
           </td>
           <td v-if="showTeam">
-            <span class="badge team-badge">{{ item.team?.name || 'Team' }}</span>
+            <span class="badge team-badge">{{ item.team?.name || $t('common.team') }}</span>
           </td>
           <td>
             <StatusBadge :status="item.status" />
@@ -42,14 +42,14 @@ const emit = defineEmits(['open', 'status']);
           <td>
             <span class="avatar-row">
               <UserAvatar :user="item.assignee" :size="28" />
-              <small>{{ item.assignee?.display_name || 'Unassigned' }}</small>
+              <small>{{ item.assignee?.display_name || $t('items.unassigned') }}</small>
             </span>
           </td>
           <td>{{ item.due_date || '-' }}</td>
         </tr>
       </tbody>
     </table>
-    <div v-if="!items.length" class="empty" style="margin:14px">No items match this view.</div>
+    <div v-if="!items.length" class="empty" style="margin:14px">{{ $t('items.noMatches') }}</div>
   </div>
 </template>
 

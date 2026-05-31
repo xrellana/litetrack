@@ -14,57 +14,57 @@ const emit = defineEmits(['edit', 'delete']);
 <template>
   <aside class="detail-sidebar panel">
     <div class="sidebar-header">
-      <h3 class="sidebar-title">Item Details</h3>
+      <h3 class="sidebar-title">{{ $t('items.details') }}</h3>
     </div>
     
     <div class="sidebar-content">
       <div class="property-group">
-        <div class="property-label">Status</div>
+        <div class="property-label">{{ $t('items.status') }}</div>
         <div class="property-value">
           <StatusBadge :status="item.status" />
         </div>
       </div>
 
       <div class="property-group">
-        <div class="property-label">Priority</div>
+        <div class="property-label">{{ $t('items.priority') }}</div>
         <div class="property-value">
           <PriorityIndicator :priority="item.priority" />
         </div>
       </div>
 
       <div class="property-group">
-        <div class="property-label"><User :size="14" class="mr-2"/> Assignee</div>
+        <div class="property-label"><User :size="14" class="mr-2"/> {{ $t('items.assignee') }}</div>
         <div class="property-value">
           <div class="avatar-row">
             <UserAvatar :user="item.assignee" :size="24" />
-            <span class="assignee-name">{{ item.assignee?.display_name || 'Unassigned' }}</span>
+            <span class="assignee-name">{{ item.assignee?.display_name || $t('items.unassigned') }}</span>
           </div>
         </div>
       </div>
 
       <div class="property-group">
-        <div class="property-label"><Calendar :size="14" class="mr-2"/> Due date</div>
+        <div class="property-label"><Calendar :size="14" class="mr-2"/> {{ $t('items.dueDate') }}</div>
         <div class="property-value font-medium">
-          {{ item.due_date || 'No due date' }}
+          {{ item.due_date || $t('items.noDueDate') }}
         </div>
       </div>
 
 
       
       <div class="property-group">
-         <div class="property-label"><Clock :size="14" class="mr-2"/> Last updated</div>
+         <div class="property-label"><Clock :size="14" class="mr-2"/> {{ $t('items.lastUpdated') }}</div>
          <div class="property-value text-sm muted">
-            {{ new Date(item.updated_at).toLocaleString() }}
+            {{ new Date(item.updated_at).toLocaleString($i18n.locale) }}
          </div>
       </div>
     </div>
 
     <div class="sidebar-actions">
       <button class="action-btn edit-btn" type="button" @click="emit('edit')">
-        <Edit3 :size="16" /> Edit details
+        <Edit3 :size="16" /> {{ $t('items.editDetails') }}
       </button>
       <button class="action-btn delete-btn" type="button" @click="emit('delete')">
-        <Trash2 :size="16" /> Delete item
+        <Trash2 :size="16" /> {{ $t('items.deleteItem') }}
       </button>
     </div>
   </aside>

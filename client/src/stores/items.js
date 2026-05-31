@@ -2,16 +2,16 @@ import { defineStore } from 'pinia';
 import api from '../services/api';
 
 export const STATUSES = [
-  { value: 'todo', label: 'To do' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'done', label: 'Done' }
+  { value: 'todo' },
+  { value: 'in_progress' },
+  { value: 'done' }
 ];
 
 export const PRIORITIES = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' }
+  { value: 'low' },
+  { value: 'medium' },
+  { value: 'high' },
+  { value: 'urgent' }
 ];
 
 export const useItemsStore = defineStore('items', {

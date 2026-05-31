@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, Route as RouteIcon, CalendarClock } from 'lucide-vue-next';
+import { useI18n } from 'vue-i18n';
 import AppHeader from '../components/layout/AppHeader.vue';
 import CreateItemModal from '../components/items/CreateItemModal.vue';
 import ItemDetailPanel from '../components/detail/ItemDetailPanel.vue';
@@ -14,6 +15,7 @@ const route = useRoute();
 const router = useRouter();
 const teams = useTeamsStore();
 const items = useItemsStore();
+const { t } = useI18n();
 const teamId = computed(() => Number(route.params.id));
 const itemId = computed(() => Number(route.params.itemId));
 const editOpen = ref(false);
@@ -41,7 +43,7 @@ async function saveEdit(payload) {
 }
 
 async function deleteItem() {
-  if (!window.confirm('Delete this item?')) return;
+  if (!window.confirm(t('items.deleteConfirm'))) return;
   await items.deleteItem(itemId.value);
   await router.push({ name: 'work', query: { teams: teamId.value } });
 }
@@ -64,19 +66,19 @@ onMounted(load);
     <section class="section item-detail-section">
       <div class="header-actions">
         <button class="button secondary icon-text" type="button" @click="router.push({ name: 'work', query: { teams: teamId } })">
-          <ArrowLeft :size="16" /> Back to Work
+          <ArrowLeft :size="16" /> {{ $t('items.backToWork') }}
         </button>
       </div>
 
       <div v-if="items.error" class="error-box">{{ items.error }}</div>
-      <div v-if="items.loading || !items.activeItem" class="empty">Loading item...</div>
+      <div v-if="items.loading || !items.activeItem" class="empty">{{ $t('items.loadingItem') }}</div>
       
       <div v-else class="detail-layout">
         <div class="main-content">
           <div class="item-header-card panel">
             <h1 class="modern-title">{{ items.activeItem.title }}</h1>
             <div class="header-meta">
-              <span class="muted flex-align"><CalendarClock :size="14" class="mr-1"/> Created {{ new Date(items.activeItem.created_at).toLocaleDateString() }}</span>
+              <span class="muted flex-align"><CalendarClock :size="14" class="mr-1"/> {{ $t('items.created', { date: new Date(items.activeItem.created_at).toLocaleDateString($i18n.locale) }) }}</span>
               <span class="muted" v-if="items.activeItem.description" style="display:block; margin-top: 12px; font-size: 1.05rem; line-height: 1.6;">
                 {{ items.activeItem.description }}
               </span>
@@ -85,8 +87,8 @@ onMounted(load);
 
           <div class="updates-card panel">
             <div class="card-header">
-              <h2 class="card-title"><RouteIcon :size="18" class="mr-2" /> Progress Updates</h2>
-              <p class="muted card-subtitle">Track the progress and history of this item over time.</p>
+              <h2 class="card-title"><RouteIcon :size="18" class="mr-2" /> {{ $t('updates.title') }}</h2>
+              <p class="muted card-subtitle">{{ $t('updates.subtitle') }}</p>
             </div>
             <div class="card-body">
               <ProgressTimeline

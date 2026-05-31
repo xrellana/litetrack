@@ -32,23 +32,23 @@ async function handleLogout() {
       <strong>LiteTrack</strong>
     </RouterLink>
 
-    <nav v-if="auth.user?.is_instance_admin" class="nav-links" aria-label="Admin navigation">
-      <RouterLink class="nav-link" :to="{ name: 'admin-overview' }"><ShieldCheck :size="17" /> Overview</RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'admin-teams' }"><Users :size="17" /> Teams</RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'admin-users' }"><Users :size="17" /> Users</RouterLink>
+    <nav v-if="auth.user?.is_instance_admin" class="nav-links" :aria-label="$t('nav.adminAria')">
+      <RouterLink class="nav-link" :to="{ name: 'admin-overview' }"><ShieldCheck :size="17" /> {{ $t('nav.overview') }}</RouterLink>
+      <RouterLink class="nav-link" :to="{ name: 'admin-teams' }"><Users :size="17" /> {{ $t('nav.teams') }}</RouterLink>
+      <RouterLink class="nav-link" :to="{ name: 'admin-users' }"><Users :size="17" /> {{ $t('nav.users') }}</RouterLink>
     </nav>
-    <nav v-else class="nav-links" aria-label="Work navigation">
+    <nav v-else class="nav-links" :aria-label="$t('nav.workAria')">
       <RouterLink class="nav-link" :class="{ 'router-link-active': workActive }" :to="{ name: 'work' }">
-        <BriefcaseBusiness :size="17" /> Work
+        <BriefcaseBusiness :size="17" /> {{ $t('nav.work') }}
       </RouterLink>
       <RouterLink v-if="hasTeamAdminAccess" class="nav-link" :class="{ 'router-link-active': teamsActive }" to="/teams">
-        <Users :size="17" /> Teams
+        <Users :size="17" /> {{ $t('nav.teams') }}
       </RouterLink>
     </nav>
 
     <div class="toolbar">
       <span v-if="teamId && !socketState.connected" class="badge offline">
-        <WifiOff :size="14" /> Offline
+        <WifiOff :size="14" /> {{ $t('nav.offline') }}
       </span>
 
       <span class="avatar-row">
@@ -58,15 +58,15 @@ async function handleLogout() {
 
       <LanguageSwitcher />
 
-      <RouterLink class="button icon secondary" title="Account Settings" :to="{ name: 'settings' }">
+      <RouterLink class="button icon secondary" :title="$t('nav.accountSettings')" :to="{ name: 'settings' }">
         <Settings :size="18" />
       </RouterLink>
-      <button class="button icon secondary" title="Toggle Theme" @click="cycleTheme">
+      <button class="button icon secondary" :title="$t('nav.toggleTheme')" @click="cycleTheme">
         <Sun v-if="themePref === 'light'" :size="18" />
         <Moon v-else-if="themePref === 'dark'" :size="18" />
         <Monitor v-else :size="18" />
       </button>
-      <button class="button icon" title="Logout" @click="handleLogout">
+      <button class="button icon" :title="$t('nav.logout')" @click="handleLogout">
         <LogOut :size="18" />
       </button>
     </div>

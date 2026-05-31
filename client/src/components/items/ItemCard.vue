@@ -22,7 +22,7 @@ function isOverdue(item) {
   <article class="item-card">
     <div class="item-meta" style="justify-content:space-between">
       <StatusBadge :status="item.status" />
-      <span v-if="item.is_pinned" class="badge in_progress" title="Pinned"><Pin :size="13" /> Pinned</span>
+      <span v-if="item.is_pinned" class="badge in_progress" :title="$t('items.pinned')"><Pin :size="13" /> {{ $t('items.pinned') }}</span>
     </div>
     <span v-if="showTeam && item.team" class="badge team-badge">{{ item.team.name }}</span>
     <h3 class="item-title">{{ item.title }}</h3>
@@ -38,16 +38,16 @@ function isOverdue(item) {
     <div class="item-meta" style="justify-content:space-between">
       <span class="avatar-row">
         <UserAvatar :user="item.assignee" :size="28" />
-        <small class="muted">{{ item.assignee?.display_name || 'Unassigned' }}</small>
+        <small class="muted">{{ item.assignee?.display_name || $t('items.unassigned') }}</small>
       </span>
-      <button class="button icon secondary" type="button" title="Open item" @click="emit('open', item)">
+      <button class="button icon secondary" type="button" :title="$t('items.openItem')" @click="emit('open', item)">
         <Eye :size="17" />
       </button>
     </div>
     <label class="field" style="gap:5px">
-      <span class="muted">Status</span>
+      <span class="muted">{{ $t('items.status') }}</span>
       <select class="select" :value="item.status" @change="emit('status', item, $event.target.value)">
-        <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ status.label }}</option>
+        <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ $t(`status.${status.value}`) }}</option>
       </select>
     </label>
   </article>

@@ -34,29 +34,29 @@ function push() {
   <form class="modern-filter-bar panel" @submit.prevent="push">
     <div class="search-section">
       <Search :size="18" class="search-icon" />
-      <input v-model="local.search" class="modern-input" placeholder="Search title or description..." @input="push" />
+      <input v-model="local.search" class="modern-input" :placeholder="$t('filters.searchPlaceholder')" @input="push" />
     </div>
     
     <div class="filters-section">
       <div class="modern-select-wrapper">
         <select v-model="local.status" class="modern-select" @change="push">
-          <option value="">All Statuses</option>
-          <option value="todo">To do</option>
-          <option value="in_progress">In progress</option>
-          <option value="done">Done</option>
+          <option value="">{{ $t('filters.allStatuses') }}</option>
+          <option value="todo">{{ $t('status.todo') }}</option>
+          <option value="in_progress">{{ $t('status.in_progress') }}</option>
+          <option value="done">{{ $t('status.done') }}</option>
         </select>
       </div>
       
       <div v-if="!hideAssignee" class="modern-select-wrapper">
         <select v-model="local.assignee" class="modern-select" @change="push">
-          <option value="">Any Assignee</option>
+          <option value="">{{ $t('filters.anyAssignee') }}</option>
           <option v-for="member in members" :key="member.user_id" :value="member.user_id">
             {{ member.user.display_name }}
           </option>
         </select>
       </div>
       
-      <button class="modern-reset" type="button" @click="emit('reset')" title="Reset filters">
+      <button class="modern-reset" type="button" @click="emit('reset')" :title="$t('filters.reset')">
         <RotateCcw :size="18" />
       </button>
     </div>

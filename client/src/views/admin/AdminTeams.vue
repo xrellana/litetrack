@@ -1,10 +1,12 @@
 <script setup>
 import { onMounted, reactive, ref, watch, nextTick } from 'vue';
 import { Edit2, Plus, ShieldCheck, Trash2, X, Save, Network, Users } from 'lucide-vue-next';
+import { useI18n } from 'vue-i18n';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
 import { useAdminStore } from '../../stores/admin';
 
+const { t } = useI18n();
 const admin = useAdminStore();
 const createForm = reactive({ name: '', description: '' });
 const creating = ref(false);
@@ -40,7 +42,7 @@ async function changeRole(team, member, role) {
 }
 
 async function removeMember(team, member) {
-  if (!window.confirm(`Remove ${member.user.display_name} from ${team.name}?`)) return;
+  if (!window.confirm(t('admin.removeMemberConfirm', { name: member.user.display_name, team: team.name }))) return;
   await admin.removeMember(team.id, member.user_id);
 }
 
@@ -60,7 +62,7 @@ async function saveTeam(team) {
 }
 
 async function deleteTeam(team) {
-  if (!window.confirm(`Are you absolutely sure you want to delete the team "${team.name}"? This action cannot be undone.`)) return;
+  if (!window.confirm(t('admin.deleteTeamConfirm', { name: team.name }))) return;
   await admin.deleteTeam(team.id);
 }
 
@@ -75,14 +77,14 @@ onMounted(() => {
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">Teams Management</h1>
-          <p class="muted">Instance-wide team and role management.</p>
+          <h1 class="page-title">{{ $t('admin.teamsManagement') }}</h1>
+          <p class="muted">{{ $t('admin.teamsManagementDescription') }}</p>
         </div>
-        <span class="badge in_progress"><ShieldCheck :size="14" /> Instance admin</span>
+        <span class="badge in_progress"><ShieldCheck :size="14" /> {{ $t('admin.instanceAdmin') }}</span>
       </div>
 
       <div v-if="admin.error" class="error-box">{{ admin.error }}</div>
-      <div v-if="admin.loading && !admin.teams.length" class="empty">Loading teams...</div>
+      <div v-if="admin.loading && !admin.teams.length" class="empty">{{ $t('teams.loading') }}</div>
 
       <template v-else>
         <div class="admin-dashboard">
@@ -90,10 +92,10 @@ onMounted(() => {
           <div class="dashboard-header-row">
             <div class="dashboard-stat-chip">
               <Network :size="18" />
-              <strong>{{ admin.teams.length }}</strong> Teams
+              <span>{{ $t('admin.teamsCount', { count: admin.teams.length }) }}</span>
             </div>
             <button v-if="!showCreateForm" class="button primary-gradient" @click="showCreateForm = true">
-              <Plus :size="17" /> Create New Team
+              <Plus :size="17" /> {{ $t('admin.createNewTeam') }}
             </button>
           </div>
 
@@ -101,28 +103,28 @@ onMounted(() => {
             <div class="card-header">
               <div class="card-title-group">
                 <div class="icon-box primary"><Network :size="20" /></div>
-                <h3>Create New Team</h3>
+                <h3>{{ $t('admin.createNewTeam') }}</h3>
               </div>
-              <button class="button icon secondary ghost" type="button" @click="showCreateForm = false" title="Cancel">
+              <button class="button icon secondary ghost" type="button" @click="showCreateForm = false" :title="$t('common.cancel')">
                 <X :size="17" />
               </button>
             </div>
             <div class="card-body">
               <div class="form-grid">
                 <label class="field">
-                  <span>Team Name</span>
-                  <input ref="teamNameInput" v-model="createForm.name" class="input" placeholder="e.g. Engineering" maxlength="80" required />
+                  <span>{{ $t('admin.teamName') }}</span>
+                  <input ref="teamNameInput" v-model="createForm.name" class="input" :placeholder="$t('admin.teamNamePlaceholder')" maxlength="80" required />
                 </label>
                 <label class="field">
-                  <span>Description (Optional)</span>
-                  <input v-model="createForm.description" class="input" placeholder="What is this team responsible for?" maxlength="5000" />
+                  <span>{{ $t('admin.teamDescriptionLabel') }}</span>
+                  <input v-model="createForm.description" class="input" :placeholder="$t('admin.teamDescriptionPlaceholder')" maxlength="5000" />
                 </label>
               </div>
             </div>
             <div class="card-footer">
-              <button class="button secondary" type="button" @click="showCreateForm = false">Cancel</button>
+              <button class="button secondary" type="button" @click="showCreateForm = false">{{ $t('common.cancel') }}</button>
               <button class="button primary-gradient" type="submit" :disabled="creating || admin.loading">
-                <Plus :size="17" /> Create Team
+                <Plus :size="17" /> {{ $t('admin.createTeam') }}
               </button>
             </div>
           </form>
@@ -134,11 +136,11 @@ onMounted(() => {
                 <template v-if="editingTeamId === team.id">
                   <form class="edit-form-inline" @submit.prevent="saveTeam(team)">
                     <div class="icon-box primary"><Network :size="20" /></div>
-                    <input v-model="editForm.name" class="input" placeholder="Team name" required maxlength="80" />
-                    <button class="button icon secondary" type="button" title="Cancel" @click="cancelEdit">
+                    <input v-model="editForm.name" class="input" :placeholder="$t('admin.teamName')" required maxlength="80" />
+                    <button class="button icon secondary" type="button" :title="$t('common.cancel')" @click="cancelEdit">
                       <X :size="17" />
                     </button>
-                    <button class="button icon success-gradient" type="submit" title="Save">
+                    <button class="button icon success-gradient" type="submit" :title="$t('common.save')">
                       <Save :size="17" />
                     </button>
                   </form>
@@ -149,17 +151,17 @@ onMounted(() => {
                     <div>
                       <h3 class="team-name">{{ team.name }}</h3>
                       <div class="team-meta">
-                        <span class="meta-item"><Users :size="14" /> {{ team.member_count }} members</span>
+                        <span class="meta-item"><Users :size="14" /> {{ $t('admin.membersCount', { count: team.member_count }) }}</span>
                         <span class="meta-divider">•</span>
-                        <span class="meta-item">Created by {{ team.creator?.display_name || 'Unknown' }}</span>
+                        <span class="meta-item">{{ $t('admin.createdBy', { name: team.creator?.display_name || $t('common.unknown') }) }}</span>
                       </div>
                     </div>
                   </div>
                   <div class="card-actions">
-                    <button class="button icon secondary" type="button" title="Edit team" @click="startEdit(team)">
+                    <button class="button icon secondary" type="button" :title="$t('admin.editTeam')" @click="startEdit(team)">
                       <Edit2 :size="16" />
                     </button>
-                    <button class="button icon danger ghost" type="button" title="Delete team" @click="deleteTeam(team)">
+                    <button class="button icon danger ghost" type="button" :title="$t('admin.deleteTeam')" @click="deleteTeam(team)">
                       <Trash2 :size="16" />
                     </button>
                   </div>
@@ -175,15 +177,15 @@ onMounted(() => {
                         <strong class="member-name">{{ member.user.display_name }}</strong>
                         <span class="member-email">{{ member.user.email }}</span>
                       </div>
-                      <span v-if="member.user.is_instance_admin" class="badge warning" style="margin-left:8px; zoom: 0.85;">Admin</span>
+                      <span v-if="member.user.is_instance_admin" class="badge warning" style="margin-left:8px; zoom: 0.85;">{{ $t('roles.admin') }}</span>
                     </div>
                     
                     <div class="member-actions">
                       <select class="select role-select" :value="member.role" @change="changeRole(team, member, $event.target.value)">
-                        <option value="admin">Admin</option>
-                        <option value="member">Member</option>
+                        <option value="admin">{{ $t('roles.admin') }}</option>
+                        <option value="member">{{ $t('roles.member') }}</option>
                       </select>
-                      <button class="button icon danger ghost" type="button" title="Remove member" @click="removeMember(team, member)">
+                      <button class="button icon danger ghost" type="button" :title="$t('teams.removeMember')" @click="removeMember(team, member)">
                         <Trash2 :size="16" />
                       </button>
                     </div>
@@ -191,7 +193,7 @@ onMounted(() => {
                   
                   <div v-if="!team.members.length" class="empty-state">
                     <Users :size="32" class="empty-icon" />
-                    <p>No members in this team yet.</p>
+                    <p>{{ $t('admin.noTeamMembers') }}</p>
                   </div>
                 </div>
               </div>
