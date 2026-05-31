@@ -54,9 +54,6 @@ const members = computed(() => {
   return [...byUser.values()].sort((a, b) => a.user.display_name.localeCompare(b.user.display_name));
 });
 const modalMembers = computed(() => teams.membersForTeam(modalTeamId.value));
-const statusCounts = computed(() => Object.fromEntries(
-  STATUSES.map((status) => [status.value, items.items.filter((item) => item.status === status.value).length])
-));
 const workActivityRows = computed(() => {
   const visibleTeams = new Set(relevantTeamIds.value.map(Number));
   return activity.rows
@@ -196,20 +193,6 @@ watch(() => route.query, () => {
         </div>
       </div>
 
-      <div class="work-metrics">
-        <div class="work-metric">
-          <span class="muted">Visible items</span>
-          <strong>{{ items.page.total }}</strong>
-        </div>
-        <div v-for="status in STATUSES" :key="status.value" class="work-metric">
-          <span class="muted">{{ status.label }}</span>
-          <strong>{{ statusCounts[status.value] || 0 }}</strong>
-        </div>
-        <div class="work-metric">
-          <span class="muted">Teams</span>
-          <strong>{{ relevantTeamIds.length }}</strong>
-        </div>
-      </div>
 
       <div class="team-filter-strip panel">
         <span class="team-filter-label"><SlidersHorizontal :size="16" /> Teams</span>
