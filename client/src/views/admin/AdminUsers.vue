@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch, nextTick } from 'vue';
-import { Pencil, Save, ShieldCheck, Trash2, UserPlus, X } from 'lucide-vue-next';
+import { Pencil, Save, ShieldCheck, Trash2, UserPlus, X, Users, Mail, UserCog, Network, Plus, ChevronDown, ChevronUp, Key } from 'lucide-vue-next';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
 import { useAdminStore } from '../../stores/admin';
@@ -8,8 +8,6 @@ import { useAuthStore } from '../../stores/auth';
 
 const admin = useAdminStore();
 const auth = useAuthStore();
-
-const instanceAdmins = computed(() => admin.users.filter((user) => user.is_instance_admin));
 
 const createForm = reactive({
   username: '',
@@ -21,6 +19,8 @@ const creating = ref(false);
 const createError = ref('');
 const showCreateForm = ref(false);
 const userNameInput = ref(null);
+
+const expandedUserId = ref(null);
 const assigningUserId = ref(null);
 const assignForm = ref({ team_id: '', role: 'member' });
 const editForm = reactive({
@@ -32,7 +32,6 @@ const editForm = reactive({
 const editing = ref(false);
 const editError = ref('');
 
-// Watch for showCreateForm changes to focus input
 watch(showCreateForm, (val) => {
   if (val) {
     nextTick(() => {
@@ -77,6 +76,18 @@ async function deleteUser(user) {
   }
 }
 
+function toggleExpand(user) {
+  if (expandedUserId.value === user.id) {
+    expandedUserId.value = null;
+    cancelEdit();
+    cancelAssign();
+  } else {
+    expandedUserId.value = user.id;
+    startEdit(user);
+    cancelAssign();
+  }
+}
+
 function startEdit(user) {
   editError.value = '';
   editForm.id = user.id;
@@ -87,9 +98,6 @@ function startEdit(user) {
 
 function cancelEdit() {
   editForm.id = null;
-  editForm.display_name = '';
-  editForm.email = '';
-  editForm.password = '';
   editError.value = '';
 }
 
@@ -110,7 +118,8 @@ async function submitEdit(user) {
     if (user.id === auth.user?.id) {
       auth.user = { ...auth.user, ...updatedUser };
     }
-    cancelEdit();
+    // Don't close expansion, just show success or clear password
+    editForm.password = '';
   } catch (error) {
     editError.value = error.message;
   } finally {
@@ -168,161 +177,631 @@ onMounted(() => {
       <div v-if="admin.loading && !admin.users.length" class="empty">Loading users...</div>
 
       <template v-else>
-        <div class="admin-grid" style="grid-template-columns: 1fr">
-          <aside class="stack">
-            <section class="panel stack" style="padding:18px">
-              <h2 style="margin:0">Instance admins</h2>
-              <div v-for="user in instanceAdmins" :key="user.id" class="avatar-row">
-                <UserAvatar :user="user" />
-                <span>
-                  <strong>{{ user.display_name }}</strong>
-                  <small class="muted" style="display:block">{{ user.email }}</small>
-                </span>
-              </div>
-            </section>
+        <div class="admin-dashboard">
+          
+          <div class="dashboard-header-row">
+            <div class="dashboard-stat-chip">
+              <Users :size="18" />
+              <strong>{{ admin.users.length }}</strong> Users
+            </div>
+            <button v-if="!showCreateForm" class="button primary-gradient" @click="showCreateForm = true">
+              <UserPlus :size="17" /> Create New User
+            </button>
+          </div>
 
-            <div v-if="!showCreateForm" class="toolbar" style="margin-bottom: 16px;">
-              <button class="button" @click="showCreateForm = true">
-                <UserPlus :size="16" /> Create user
+          <form v-if="showCreateForm" class="premium-card create-form-card" @submit.prevent="createUser">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="icon-box success"><UserPlus :size="20" /></div>
+                <h3>Create New User</h3>
+              </div>
+              <button class="button icon ghost" type="button" @click="showCreateForm = false" title="Cancel">
+                <X :size="17" />
               </button>
             </div>
-
-            <form v-if="showCreateForm" class="panel stack" style="padding:18px" @submit.prevent="createUser">
-              <div class="section-header" style="align-items: center; margin: 0 0 16px 0;">
-                <h2 style="margin:0">Create user</h2>
-                <button class="button icon secondary ghost" type="button" @click="showCreateForm = false" title="Cancel">
-                  <X :size="18" />
-                </button>
-              </div>
-              <div v-if="createError" class="error-box">{{ createError }}</div>
-              <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
+            <div v-if="createError" class="error-box" style="margin: 16px 24px 0;">{{ createError }}</div>
+            <div class="card-body">
+              <div class="form-grid">
                 <label class="field">
                   <span>Username</span>
-                  <input ref="userNameInput" v-model="createForm.username" class="input" minlength="3" maxlength="32" required />
+                  <input ref="userNameInput" v-model="createForm.username" class="input" minlength="3" maxlength="32" placeholder="e.g. jdoe" required />
+                </label>
+                <label class="field">
+                  <span>Display Name</span>
+                  <input v-model="createForm.display_name" class="input" placeholder="e.g. John Doe" maxlength="80" />
                 </label>
                 <label class="field">
                   <span>Email</span>
-                  <input v-model="createForm.email" class="input" type="email" required />
-                </label>
-                <label class="field">
-                  <span>Display name</span>
-                  <input v-model="createForm.display_name" class="input" maxlength="80" />
+                  <input v-model="createForm.email" class="input" type="email" placeholder="e.g. jdoe@example.com" required />
                 </label>
                 <label class="field">
                   <span>Password</span>
-                  <input v-model="createForm.password" class="input" type="password" minlength="8" required />
+                  <input v-model="createForm.password" class="input" type="password" placeholder="Min 8 characters" minlength="8" required />
                 </label>
-                <button class="button secondary" type="button" @click="showCreateForm = false">Cancel</button>
-                <button class="button" type="submit" :disabled="creating || admin.loading">
-                  <UserPlus :size="16" /> Create
-                </button>
               </div>
-            </form>
+            </div>
+            <div class="card-footer">
+              <button class="button secondary" type="button" @click="showCreateForm = false">Cancel</button>
+              <button class="button success-gradient" type="submit" :disabled="creating || admin.loading">
+                <UserPlus :size="17" /> Create User
+              </button>
+            </div>
+          </form>
 
-            <section class="panel stack" style="padding:18px">
-              <h2 style="margin:0">User directory</h2>
-              <div v-for="user in admin.users" :key="user.id" class="activity-row" style="display:grid; gap:16px;">
-                <div class="section-header" style="align-items:center; margin:0">
-                  <div class="avatar-row">
-                    <UserAvatar :user="user" />
-                    <span>
-                      <strong>{{ user.display_name }}</strong>
-                      <small class="muted" style="display:block">{{ user.username }} · {{ user.email }}</small>
-                    </span>
-                  </div>
-                  <div class="toolbar">
-                    <button class="button icon secondary" type="button" title="Edit user" :disabled="editing && editForm.id === user.id" @click="startEdit(user)">
-                      <Pencil :size="16" />
-                    </button>
-                    <button v-if="user.id !== auth.user?.id" class="button icon danger" type="button" title="Delete user" @click="deleteUser(user)">
-                      <Trash2 :size="16" />
-                    </button>
-                  </div>
-                </div>
-
-                <form
-                  v-if="editForm.id === user.id"
-                  class="grid"
-                  style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft)"
-                  @submit.prevent="submitEdit(user)"
-                >
-                  <div v-if="editError" class="error-box" style="grid-column:1 / -1">{{ editError }}</div>
-                  <label class="field">
-                    <span>Display name</span>
-                    <input v-model="editForm.display_name" class="input" maxlength="80" required :disabled="editing" />
-                  </label>
-                  <label class="field">
-                    <span>Email</span>
-                    <input v-model="editForm.email" class="input" type="email" required :disabled="editing" />
-                  </label>
-                  <label class="field">
-                    <span>New password</span>
-                    <input
-                      v-model="editForm.password"
-                      class="input"
-                      type="password"
-                      minlength="8"
-                      autocomplete="new-password"
-                      placeholder="Leave blank to keep current"
-                      :disabled="editing"
-                    />
-                  </label>
-                  <button class="button secondary" type="button" :disabled="editing" @click="cancelEdit">Cancel</button>
-                  <button class="button" type="submit" :disabled="editing || admin.loading">
-                    <Save :size="16" /> Save
-                  </button>
-                </form>
-                
-                <div class="item-meta" style="padding-top:8px; border-top:1px solid var(--border)">
-                  <span v-if="user.is_instance_admin" class="badge in_progress" style="margin-right:8px">instance admin</span>
-                  
-                  <div
-                    v-for="membership in user.memberships"
-                    :key="membership.id"
-                    class="badge"
-                    style="display:inline-flex; align-items:center; gap:6px; padding:2px 4px 2px 8px; background:var(--surface-soft); border:1px solid var(--border)"
-                  >
-                    <span>{{ membership.team_name }}</span>
-                    <select
-                      class="select"
-                      style="min-height:24px; height:24px; padding:0 16px 0 6px; font-size:0.75rem; width:auto; border:none; background:transparent"
-                      :style="{ color: membership.role === 'admin' ? 'var(--primary)' : 'var(--text)' }"
-                      :value="membership.role"
-                      @change="changeRole(membership.team_id, user.id, $event.target.value)"
+          <div class="premium-card">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Account</th>
+                    <th>Role</th>
+                    <th>Teams</th>
+                    <th class="actions-col"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-for="user in admin.users" :key="user.id">
+                    
+                    <!-- Main Row -->
+                    <tr 
+                      class="data-row" 
+                      :class="{ 'is-expanded': expandedUserId === user.id }"
+                      @click="toggleExpand(user)"
                     >
-                      <option value="admin">Admin</option>
-                      <option value="member">Member</option>
-                    </select>
-                    <button class="button icon secondary" style="width:20px; height:20px; min-height:20px; background:transparent; border:none" title="Remove from team" @click="removeMember(membership.team_id, user)">
-                      <X :size="12" />
-                    </button>
-                  </div>
-                  
-                  <template v-if="assigningUserId === user.id">
-                    <form @submit.prevent="assignUser(user)" style="display:inline-flex; gap:6px; align-items:center; background:var(--surface-soft); padding:2px; border-radius:8px">
-                      <select v-model="assignForm.team_id" class="select" style="min-height:28px; height:28px; padding:0 8px; font-size:0.78rem" required>
-                        <option value="" disabled>Select a team</option>
-                        <option v-for="team in availableTeams(user)" :key="team.id" :value="team.id">{{ team.name }}</option>
-                      </select>
-                      <select v-model="assignForm.role" class="select" style="min-height:28px; height:28px; padding:0 8px; font-size:0.78rem" required>
-                        <option value="admin">Admin</option>
-                        <option value="member">Member</option>
-                      </select>
-                      <button class="button" style="min-height:28px; height:28px; padding:0 8px; font-size:0.78rem" type="submit">Assign</button>
-                      <button class="button icon secondary" style="width:28px; height:28px; min-height:28px" type="button" @click="cancelAssign">
-                        <X :size="14" />
-                      </button>
-                    </form>
+                      <td>
+                        <div class="user-cell">
+                          <UserAvatar :user="user" style="width:36px;height:36px;font-size:0.9rem;" />
+                          <div class="user-details">
+                            <strong class="user-name">
+                              {{ user.display_name }}
+                              <span v-if="user.id === auth.user?.id" class="badge primary micro">You</span>
+                            </strong>
+                            <span class="user-email"><Mail :size="12"/> {{ user.email }}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="muted">@{{ user.username }}</span>
+                      </td>
+                      <td>
+                        <span v-if="user.is_instance_admin" class="badge violet"><UserCog :size="12"/> Admin</span>
+                        <span v-else class="badge todo">User</span>
+                      </td>
+                      <td>
+                        <div class="teams-cell">
+                          <span v-if="user.is_instance_admin" class="muted text-sm">Global</span>
+                          <span v-else-if="user.memberships.length === 0" class="muted text-sm">None</span>
+                          <span v-else class="badge success">{{ user.memberships.length }} Teams</span>
+                        </div>
+                      </td>
+                      <td class="actions-col">
+                        <div class="row-actions" @click.stop>
+                          <button v-if="user.id !== auth.user?.id" class="button icon danger ghost" type="button" title="Delete user" @click="deleteUser(user)">
+                            <Trash2 :size="16" />
+                          </button>
+                          <button class="button icon ghost" type="button" @click="toggleExpand(user)">
+                            <ChevronUp v-if="expandedUserId === user.id" :size="18" />
+                            <ChevronDown v-else :size="18" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- Expanded Details Panel -->
+                    <tr v-if="expandedUserId === user.id" class="expanded-row">
+                      <td colspan="5" class="expanded-cell">
+                        <div class="expanded-panel">
+                          
+                          <!-- Edit Profile Section -->
+                          <div class="panel-section edit-section">
+                            <div class="section-header-small">
+                              <Pencil :size="16" class="section-icon" />
+                              <h4>Edit Profile</h4>
+                            </div>
+                            
+                            <form @submit.prevent="submitEdit(user)" class="edit-form-grid">
+                              <div v-if="editError" class="error-box full-width">{{ editError }}</div>
+                              <label class="field">
+                                <span>Display name</span>
+                                <input v-model="editForm.display_name" class="input" maxlength="80" required :disabled="editing" />
+                              </label>
+                              <label class="field">
+                                <span>Email</span>
+                                <input v-model="editForm.email" class="input" type="email" required :disabled="editing" />
+                              </label>
+                              <label class="field">
+                                <span>New password (optional)</span>
+                                <div class="input-with-icon">
+                                  <Key :size="16" class="input-icon" />
+                                  <input
+                                    v-model="editForm.password"
+                                    class="input"
+                                    type="password"
+                                    minlength="8"
+                                    autocomplete="new-password"
+                                    placeholder="Leave blank to keep current"
+                                    :disabled="editing"
+                                    style="padding-left: 36px;"
+                                  />
+                                </div>
+                              </label>
+                              <div class="edit-actions">
+                                <button class="button success-gradient" type="submit" :disabled="editing || admin.loading">
+                                  <Save :size="16" /> Save Changes
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+
+                          <div class="vertical-divider"></div>
+
+                          <!-- Memberships Section -->
+                          <div class="panel-section memberships-section">
+                            <div class="section-header-small">
+                              <Network :size="16" class="section-icon" />
+                              <h4>Team Memberships</h4>
+                              <button v-if="!user.is_instance_admin && assigningUserId !== user.id" class="button secondary small-btn" @click="startAssign(user.id)" style="margin-left:auto">
+                                <Plus :size="14" /> Assign
+                              </button>
+                            </div>
+
+                            <div v-if="user.is_instance_admin" class="empty-state-small">
+                              <ShieldCheck :size="24" class="muted-icon" />
+                              <p>Instance admins have global access to all teams.</p>
+                            </div>
+
+                            <div v-else>
+                              <!-- Assign Form -->
+                              <div v-if="assigningUserId === user.id" class="assign-form">
+                                <form @submit.prevent="assignUser(user)" class="form-inline">
+                                  <select v-model="assignForm.team_id" class="select" style="flex:1" required>
+                                    <option value="" disabled>Select team...</option>
+                                    <option v-for="team in availableTeams(user)" :key="team.id" :value="team.id">{{ team.name }}</option>
+                                  </select>
+                                  <select v-model="assignForm.role" class="select" style="width:100px" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="member">Member</option>
+                                  </select>
+                                  <button class="button primary" type="submit">Add</button>
+                                  <button class="button icon ghost" type="button" @click="cancelAssign"><X :size="16"/></button>
+                                </form>
+                              </div>
+
+                              <!-- Memberships List -->
+                              <div class="memberships-list">
+                                <div v-for="membership in user.memberships" :key="membership.id" class="membership-chip">
+                                  <span class="team-name">{{ membership.team_name }}</span>
+                                  <select
+                                    class="select chip-select"
+                                    :class="{ 'is-admin': membership.role === 'admin' }"
+                                    :value="membership.role"
+                                    @change="changeRole(membership.team_id, user.id, $event.target.value)"
+                                  >
+                                    <option value="admin">Admin</option>
+                                    <option value="member">Member</option>
+                                  </select>
+                                  <button class="button icon ghost danger-hover chip-remove" title="Remove from team" @click="removeMember(membership.team_id, user)">
+                                    <X :size="14" />
+                                  </button>
+                                </div>
+                                <div v-if="!user.memberships.length && assigningUserId !== user.id" class="empty-state-small">
+                                  <p>Not assigned to any teams.</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                          </div>
+                          
+                        </div>
+                      </td>
+                    </tr>
+                    
                   </template>
-                  <button v-else-if="!user.is_instance_admin" class="button secondary" style="min-height:28px; padding:4px 8px; font-size:0.78rem; border-radius:999px" @click="startAssign(user.id)">
-                    <UserPlus :size="14" /> Assign Team
-                  </button>
-                </div>
-              </div>
-            </section>
-          </aside>
+                </tbody>
+              </table>
+              <div v-if="!admin.users.length" class="empty" style="min-height: 120px;">No users found.</div>
+            </div>
+          </div>
+
         </div>
       </template>
     </section>
   </main>
 </template>
+
+<style scoped>
+.admin-dashboard {
+  display: grid;
+  gap: 24px;
+  margin-top: 10px;
+}
+
+.dashboard-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.dashboard-stat-chip strong {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.primary-gradient { background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: white; border: none; }
+.success-gradient { background: linear-gradient(135deg, var(--success), #059669); color: white; border: none; }
+
+.premium-card {
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.create-form-card {
+  border: 1px solid var(--success);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.card-title-group h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.icon-box.success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.icon-box.violet { background: rgba(139, 92, 246, 0.15); color: var(--violet); }
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 24px;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th {
+  padding: 16px 24px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.data-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-row:hover {
+  background: var(--surface-soft);
+}
+
+.data-row.is-expanded {
+  background: var(--primary-bg);
+  border-bottom-color: transparent;
+}
+
+.data-table td {
+  padding: 16px 24px;
+  vertical-align: middle;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.user-email {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.teams-cell {
+  display: flex;
+  align-items: center;
+}
+
+.text-sm {
+  font-size: 0.85rem;
+}
+
+.actions-col {
+  text-align: right;
+  width: 100px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.expanded-row {
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.expanded-cell {
+  padding: 0;
+}
+
+.expanded-panel {
+  display: flex;
+  min-height: 200px;
+}
+
+.panel-section {
+  flex: 1;
+  padding: 24px;
+}
+
+.vertical-divider {
+  width: 1px;
+  background: var(--border);
+  margin: 24px 0;
+}
+
+.section-header-small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-header-small h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.section-icon {
+  color: var(--primary);
+}
+
+.edit-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.small-btn {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  border-radius: 999px;
+}
+
+.assign-form {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.form-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memberships-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.membership-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.team-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.chip-select {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 16px 0 8px;
+  font-size: 0.8rem;
+  width: auto;
+  border: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.chip-select.is-admin {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.chip-remove {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+
+.empty-state-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.muted-icon {
+  opacity: 0.3;
+  margin-bottom: 8px;
+}
+
+.button.ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+
+.button.ghost:hover {
+  background: var(--surface-strong);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.button.danger.ghost {
+  color: var(--muted);
+}
+
+.button.danger.ghost:hover, .danger-hover:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border-color: transparent;
+}
+
+.badge.micro {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  min-height: 18px;
+}
+
+.badge.violet { background: rgba(139, 92, 246, 0.15); color: var(--violet); }
+.badge.primary { background: var(--primary-bg); color: var(--primary); }
+.badge.success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.badge.todo { color: var(--muted); background: var(--surface-soft); }
+
+@media (max-width: 980px) {
+  .expanded-panel {
+    flex-direction: column;
+  }
+  .vertical-divider {
+    width: auto;
+    height: 1px;
+    margin: 0 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-inline { flex-direction: column; align-items: stretch; }
+  .data-table th:nth-child(2),
+  .data-table td:nth-child(2),
+  .data-table th:nth-child(4),
+  .data-table td:nth-child(4) {
+    display: none;
+  }
+}
+</style>

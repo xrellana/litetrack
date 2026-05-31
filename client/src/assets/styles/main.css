@@ -135,12 +135,19 @@ a {
   box-shadow: 0 12px 32px var(--primary-bg);
 }
 
-.auth-brand h1,
-.page-title {
+.auth-brand h1 {
   margin: 0;
   font-size: clamp(2rem, 4vw, 4rem);
   line-height: 1;
   letter-spacing: 0;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .section-title {
@@ -215,11 +222,12 @@ a {
   justify-content: center;
   gap: 8px;
   border-radius: 8px;
-  padding: 9px 14px;
+  padding: 8px 16px;
   cursor: pointer;
   color: #ffffff;
   background: var(--primary);
-  font-weight: 750;
+  font-weight: 600;
+  font-size: 0.9rem;
   transition: transform 160ms ease, filter 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
