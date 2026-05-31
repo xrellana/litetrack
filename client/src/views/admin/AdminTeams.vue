@@ -1,13 +1,27 @@
 <script setup>
-import { onMounted, ref } from 'vue';
-import { Edit2, ShieldCheck, Trash2, X, Save } from 'lucide-vue-next';
+import { onMounted, reactive, ref } from 'vue';
+import { Edit2, Plus, ShieldCheck, Trash2, X, Save } from 'lucide-vue-next';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
 import { useAdminStore } from '../../stores/admin';
 
 const admin = useAdminStore();
+const createForm = reactive({ name: '', description: '' });
+const creating = ref(false);
 const editingTeamId = ref(null);
 const editForm = ref({ name: '', description: '' });
+
+async function createTeam() {
+  if (!createForm.name.trim()) return;
+  creating.value = true;
+  try {
+    await admin.createTeam(createForm);
+    createForm.name = '';
+    createForm.description = '';
+  } finally {
+    creating.value = false;
+  }
+}
 
 async function changeRole(team, member, role) {
   await admin.changeMemberRole(team.id, member.user_id, role);
@@ -64,6 +78,23 @@ onMounted(() => {
             <h2 style="margin:0">Teams</h2>
             <span class="muted">{{ admin.teams.length }} total</span>
           </div>
+
+          <form class="panel stack" style="padding:18px" @submit.prevent="createTeam">
+            <h3 style="margin:0">Create team</h3>
+            <div class="grid" style="grid-template-columns:minmax(220px,1fr) minmax(260px,2fr) auto;align-items:end">
+              <label class="field">
+                <span>Name</span>
+                <input v-model="createForm.name" class="input" maxlength="80" required />
+              </label>
+              <label class="field">
+                <span>Description</span>
+                <input v-model="createForm.description" class="input" maxlength="5000" />
+              </label>
+              <button class="button" type="submit" :disabled="creating || admin.loading">
+                <Plus :size="17" /> Create
+              </button>
+            </div>
+          </form>
 
           <article v-for="team in admin.teams" :key="team.id" class="panel admin-team">
             <div class="section-header" style="align-items:center">

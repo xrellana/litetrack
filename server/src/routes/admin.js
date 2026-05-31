@@ -1,10 +1,32 @@
 const { z } = require('zod');
+const bcrypt = require('bcryptjs');
 const express = require('express');
 const db = require('../db/connection');
 const { authenticate, requireCsrf } = require('../middleware/auth');
 const { AppError, asyncHandler, validateBody } = require('../middleware/errors');
-const { getMembership, publicUser, requireInstanceAdmin, USER_COLUMNS } = require('../services/permissions');
-const { idParam, sendData } = require('../services/http');
+const {
+  avatarColor,
+  getMembership,
+  normalizeEmail,
+  publicUser,
+  requireInstanceAdmin,
+  USER_COLUMNS
+} = require('../services/permissions');
+const { idParam, sendData, sqliteConflict } = require('../services/http');
+
+const usernameSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(32)
+  .regex(/^[a-zA-Z0-9_-]+$/);
+
+const createUserSchema = z.object({
+  username: usernameSchema,
+  email: z.string().trim().email(),
+  password: z.string().min(8),
+  display_name: z.string().trim().min(1).max(80).optional()
+});
 
 const assignTeamSchema = z.object({
   team_id: z.number().int().positive(),
@@ -88,6 +110,32 @@ router.get('/overview', asyncHandler(async (req, res) => {
   });
 }));
 
+router.post('/users', validateBody(createUserSchema), asyncHandler(async (req, res) => {
+  await requireInstanceAdmin(db, req.user.id);
+
+  const email = normalizeEmail(req.body.email);
+  const username = req.body.username.trim();
+  const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
+  const passwordHash = await bcrypt.hash(req.body.password, rounds);
+  let userId;
+
+  try {
+    [userId] = await db('users').insert({
+      username,
+      email,
+      password_hash: passwordHash,
+      display_name: req.body.display_name || username,
+      avatar_color: avatarColor(`${username}:${email}`),
+      is_instance_admin: 0
+    });
+  } catch (error) {
+    sqliteConflict(error, 'Username or email is already in use.');
+  }
+
+  const user = await db('users').select(USER_COLUMNS).where({ id: userId }).first();
+  return sendData(res, { ...publicUser(user), memberships: [] }, 201);
+}));
+
 router.delete('/teams/:id', asyncHandler(async (req, res) => {
   await requireInstanceAdmin(db, req.user.id);
   const teamId = idParam(req.params.id, 'team id');
@@ -121,6 +169,9 @@ router.post('/users/:id/teams', validateBody(assignTeamSchema), asyncHandler(asy
 
   const user = await db('users').where({ id: userId }).first();
   if (!user) throw new AppError(404, 'NOT_FOUND', 'User not found.');
+  if (user.is_instance_admin) {
+    throw new AppError(400, 'VALIDATION_ERROR', 'Instance admins cannot be assigned to teams.');
+  }
 
   const team = await db('teams').where({ id: team_id }).first();
   if (!team) throw new AppError(404, 'NOT_FOUND', 'Team not found.');
@@ -140,4 +191,3 @@ router.post('/users/:id/teams', validateBody(assignTeamSchema), asyncHandler(asy
 }));
 
 module.exports = router;
-

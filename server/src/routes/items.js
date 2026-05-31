@@ -12,6 +12,7 @@ const {
   hydrateDiscussionRows,
   hydrateItems,
   insertActivity,
+  isInstanceAdmin,
   now,
   pageEnvelope,
   parsePagination,
@@ -56,6 +57,10 @@ const listQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional()
 });
 
+const globalListQuerySchema = listQuerySchema.extend({
+  teams: z.string().trim().max(500).optional()
+});
+
 router.use(authenticate, requireCsrf);
 
 async function replaceItemTags(trx, itemId, teamId, tagIds) {
@@ -72,6 +77,37 @@ async function loadItem(itemId) {
   if (!item) return null;
   const [hydrated] = await hydrateItems(db, [item]);
   return hydrated;
+}
+
+function applyItemFilters(base, query) {
+  if (query.status) base.andWhere('items.status', query.status);
+  if (query.assignee) base.andWhere('items.assigned_to', query.assignee);
+  if (query.search) {
+    const search = `%${query.search}%`;
+    base.andWhere((builder) => {
+      builder.whereLike('items.title', search).orWhereLike('items.description', search);
+    });
+  }
+  if (query.tag) {
+    base.whereExists(function exists() {
+      this.select(1)
+        .from('item_tags')
+        .whereRaw('item_tags.item_id = items.id')
+        .andWhere('item_tags.tag_id', query.tag);
+    });
+  }
+  return base;
+}
+
+function parseTeamFilter(value) {
+  if (!value) return [];
+  const ids = value.split(',')
+    .map((id) => Number(id.trim()))
+    .filter(Boolean);
+  if (!ids.length || ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+    throw new AppError(400, 'VALIDATION_ERROR', 'Team filter must contain positive team ids.');
+  }
+  return [...new Set(ids)];
 }
 
 router.post('/teams/:teamId/items', validateBody(itemCreateSchema), asyncHandler(async (req, res) => {
@@ -114,28 +150,46 @@ router.post('/teams/:teamId/items', validateBody(itemCreateSchema), asyncHandler
   return sendData(res, item, 201);
 }));
 
+router.get('/items', validateQuery(globalListQuerySchema), asyncHandler(async (req, res) => {
+  if (await isInstanceAdmin(db, req.user.id)) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
+  }
+
+  const memberships = await db('team_members')
+    .select('team_id')
+    .where({ user_id: req.user.id });
+  const accessibleTeamIds = memberships.map((membership) => membership.team_id);
+  const requestedTeamIds = parseTeamFilter(req.query.teams);
+  if (requestedTeamIds.some((teamId) => !accessibleTeamIds.includes(teamId))) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
+  }
+
+  const visibleTeamIds = requestedTeamIds.length ? requestedTeamIds : accessibleTeamIds;
+  const { limit, offset } = parsePagination(req.query);
+  if (!visibleTeamIds.length) {
+    return res.json(pageEnvelope([], limit, offset, 0));
+  }
+
+  const base = applyItemFilters(db('items').whereIn('items.team_id', visibleTeamIds), req.query);
+  const countRow = await base.clone().count({ total: 'items.id' }).first();
+  const items = await base
+    .clone()
+    .select('items.*')
+    .orderBy('items.is_pinned', 'desc')
+    .orderBy('items.updated_at', 'desc')
+    .limit(limit)
+    .offset(offset);
+
+  const hydrated = await hydrateItems(db, items);
+  return res.json(pageEnvelope(hydrated, limit, offset, Number(countRow.total || 0)));
+}));
+
 router.get('/teams/:teamId/items', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
   const teamId = idParam(req.params.teamId, 'team id');
   await requireMembership(db, teamId, req.user.id);
   const { limit, offset } = parsePagination(req.query);
 
-  const base = db('items').where('items.team_id', teamId);
-  if (req.query.status) base.andWhere('items.status', req.query.status);
-  if (req.query.assignee) base.andWhere('items.assigned_to', req.query.assignee);
-  if (req.query.search) {
-    const search = `%${req.query.search}%`;
-    base.andWhere((builder) => {
-      builder.whereLike('items.title', search).orWhereLike('items.description', search);
-    });
-  }
-  if (req.query.tag) {
-    base.whereExists(function exists() {
-      this.select(1)
-        .from('item_tags')
-        .whereRaw('item_tags.item_id = items.id')
-        .andWhere('item_tags.tag_id', req.query.tag);
-    });
-  }
+  const base = applyItemFilters(db('items').where('items.team_id', teamId), req.query);
 
   const countRow = await base.clone().count({ total: 'items.id' }).first();
   const items = await base
@@ -243,4 +297,3 @@ router.delete('/items/:id', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
-

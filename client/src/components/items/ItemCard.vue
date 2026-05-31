@@ -8,7 +8,8 @@ import { STATUSES } from '../../stores/items';
 
 const props = defineProps({
   item: { type: Object, required: true },
-  compact: { type: Boolean, default: false }
+  compact: { type: Boolean, default: false },
+  showTeam: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['open', 'status']);
@@ -24,6 +25,7 @@ function isOverdue(item) {
       <StatusBadge :status="item.status" />
       <span v-if="item.is_pinned" class="badge in_progress" title="Pinned"><Pin :size="13" /> Pinned</span>
     </div>
+    <span v-if="showTeam && item.team" class="badge team-badge">{{ item.team.name }}</span>
     <h3 class="item-title">{{ item.title }}</h3>
     <p v-if="!compact && item.description" class="muted" style="margin:0;overflow-wrap:anywhere">
       {{ item.description.slice(0, 150) }}{{ item.description.length > 150 ? '...' : '' }}
@@ -54,4 +56,3 @@ function isOverdue(item) {
     </label>
   </article>
 </template>
-

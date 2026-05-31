@@ -1,31 +1,30 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Save, ShieldAlert, Trash2 } from 'lucide-vue-next';
+import { Plus, Save, ShieldAlert, Trash2 } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
 import AppHeader from '../components/layout/AppHeader.vue';
 import UserAvatar from '../components/common/UserAvatar.vue';
 import { useRealtime } from '../composables/useRealtime';
-import { useAuthStore } from '../stores/auth';
 import { useTeamsStore } from '../stores/teams';
 
 const route = useRoute();
 const router = useRouter();
-const auth = useAuthStore();
 const teams = useTeamsStore();
 const teamId = computed(() => Number(route.params.id));
 const busy = ref(false);
+const adding = ref(false);
 const error = ref('');
 const loaded = ref(false);
 const teamForm = reactive({ name: '', description: '' });
+const addMemberForm = reactive({ identifier: '', role: 'member' });
 
 // Reactive: true only if current user is admin of this specific team
 const isAdmin = computed(() => {
   const team = teams.teams.find(t => t.id === teamId.value);
-  return team?.role === 'admin' || team?.role === 'instance_admin';
+  return team?.role === 'admin';
 });
-const isInstanceAdmin = computed(() => Boolean(auth.user?.is_instance_admin));
-const canManage = computed(() => isAdmin.value || isInstanceAdmin.value);
+const canManage = computed(() => isAdmin.value);
 
 useRealtime(teamId);
 
@@ -42,9 +41,8 @@ async function load() {
   try {
     await teams.fetchTeamContext(teamId.value);
     loaded.value = true;
-    // Redirect non-admin members away from this page entirely
     if (!canManage.value) {
-      router.replace({ name: 'dashboard', params: { id: teamId.value } });
+      router.replace({ name: 'work', query: { teams: teamId.value } });
     }
   } catch (err) {
     error.value = err.message;
@@ -70,6 +68,24 @@ async function changeRole(member, role) {
   await teams.changeMemberRole(teamId.value, member.user_id, role);
 }
 
+async function addMember() {
+  if (!canManage.value) return;
+  adding.value = true;
+  error.value = '';
+  try {
+    await teams.addMemberToTeam(teamId.value, {
+      identifier: addMemberForm.identifier,
+      role: addMemberForm.role
+    });
+    addMemberForm.identifier = '';
+    addMemberForm.role = 'member';
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    adding.value = false;
+  }
+}
+
 async function removeMember(member) {
   if (!canManage.value) return;
   if (!window.confirm(`Remove ${member.user.display_name} from this team?`)) return;
@@ -90,13 +106,13 @@ onMounted(load);
       <template v-else-if="!canManage">
         <div class="section-header">
           <div>
-            <h1 class="page-title">Team</h1>
+            <h1 class="page-title">Team Settings</h1>
             <p class="muted">You don't have permission to manage this team.</p>
           </div>
         </div>
         <div class="panel" style="padding:24px;display:flex;align-items:center;gap:12px;border-color:rgba(245,158,11,0.28)">
           <ShieldAlert :size="22" style="color:var(--warning);flex-shrink:0" />
-          <span>Only team <strong>admins</strong> can access team management. Redirecting to dashboard...</span>
+          <span>Only team <strong>admins</strong> can access team management. Redirecting to Work...</span>
         </div>
       </template>
 
@@ -104,7 +120,7 @@ onMounted(load);
       <template v-else>
         <div class="section-header">
           <div>
-            <h1 class="page-title">Team</h1>
+            <h1 class="page-title">Team Settings</h1>
             <p class="muted">Manage team profile and members.</p>
           </div>
         </div>
@@ -130,6 +146,22 @@ onMounted(load);
 
             <section class="panel stack" style="padding:18px">
               <h2 style="margin:0">Members</h2>
+              <form class="member-add-form" @submit.prevent="addMember">
+                <label class="field" style="min-width:220px;flex:1">
+                  <span>Username or email</span>
+                  <input v-model="addMemberForm.identifier" class="input" required maxlength="254" placeholder="name@example.com" />
+                </label>
+                <label class="field" style="width:140px">
+                  <span>Role</span>
+                  <select v-model="addMemberForm.role" class="select">
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </label>
+                <button class="button" type="submit" :disabled="adding">
+                  <Plus :size="17" /> Add
+                </button>
+              </form>
               <div v-for="member in teams.members" :key="member.user_id" class="activity-row">
                 <div class="section-header" style="align-items:center">
                   <span class="avatar-row">

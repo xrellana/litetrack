@@ -7,7 +7,8 @@ import UserAvatar from '../common/UserAvatar.vue';
 import { STATUSES } from '../../stores/items';
 
 defineProps({
-  items: { type: Array, default: () => [] }
+  items: { type: Array, default: () => [] },
+  showTeam: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['open', 'status']);
@@ -19,6 +20,7 @@ const emit = defineEmits(['open', 'status']);
       <thead>
         <tr>
           <th>Item</th>
+          <th v-if="showTeam">Team</th>
           <th>Status</th>
           <th>Priority</th>
           <th>Assignee</th>
@@ -32,6 +34,9 @@ const emit = defineEmits(['open', 'status']);
           <td>
             <strong>{{ item.title }}</strong>
             <small v-if="item.description" class="muted" style="display:block">{{ item.description.slice(0, 120) }}</small>
+          </td>
+          <td v-if="showTeam">
+            <span class="badge team-badge">{{ item.team?.name || 'Team' }}</span>
           </td>
           <td>
             <div class="stack-tight">
@@ -65,4 +70,3 @@ const emit = defineEmits(['open', 'status']);
     <div v-if="!items.length" class="empty" style="margin:14px">No items match this view.</div>
   </div>
 </template>
-

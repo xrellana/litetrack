@@ -3,7 +3,8 @@ import { Activity } from 'lucide-vue-next';
 import UserAvatar from '../common/UserAvatar.vue';
 
 defineProps({
-  rows: { type: Array, default: () => [] }
+  rows: { type: Array, default: () => [] },
+  showTeam: { type: Boolean, default: false }
 });
 
 function actionLabel(action) {
@@ -22,6 +23,7 @@ function actionLabel(action) {
         </span>
       </div>
       <div class="item-meta">
+        <span v-if="showTeam && row.team" class="badge team-badge">{{ row.team.name }}</span>
         <span class="badge in_progress"><Activity :size="13" /> {{ actionLabel(row.action) }}</span>
         <span v-if="row.details?.item_title" class="muted">{{ row.details.item_title }}</span>
         <span v-else-if="row.details?.team_name" class="muted">{{ row.details.team_name }}</span>

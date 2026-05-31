@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ShieldCheck, Trash2, UserPlus, X } from 'lucide-vue-next';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
@@ -11,8 +11,37 @@ const auth = useAuthStore();
 
 const instanceAdmins = computed(() => admin.users.filter((user) => user.is_instance_admin));
 
+const createForm = reactive({
+  username: '',
+  email: '',
+  display_name: '',
+  password: ''
+});
+const creating = ref(false);
+const createError = ref('');
 const assigningUserId = ref(null);
 const assignForm = ref({ team_id: '', role: 'member' });
+
+async function createUser() {
+  createError.value = '';
+  creating.value = true;
+  try {
+    await admin.createUser({
+      username: createForm.username,
+      email: createForm.email,
+      display_name: createForm.display_name || undefined,
+      password: createForm.password
+    });
+    createForm.username = '';
+    createForm.email = '';
+    createForm.display_name = '';
+    createForm.password = '';
+  } catch (error) {
+    createError.value = error.message;
+  } finally {
+    creating.value = false;
+  }
+}
 
 async function deleteUser(user) {
   if (user.id === auth.user?.id) {
@@ -91,6 +120,32 @@ onMounted(() => {
               </div>
             </section>
 
+            <form class="panel stack" style="padding:18px" @submit.prevent="createUser">
+              <h2 style="margin:0">Create user</h2>
+              <div v-if="createError" class="error-box">{{ createError }}</div>
+              <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
+                <label class="field">
+                  <span>Username</span>
+                  <input v-model="createForm.username" class="input" minlength="3" maxlength="32" required />
+                </label>
+                <label class="field">
+                  <span>Email</span>
+                  <input v-model="createForm.email" class="input" type="email" required />
+                </label>
+                <label class="field">
+                  <span>Display name</span>
+                  <input v-model="createForm.display_name" class="input" maxlength="80" />
+                </label>
+                <label class="field">
+                  <span>Password</span>
+                  <input v-model="createForm.password" class="input" type="password" minlength="8" required />
+                </label>
+                <button class="button" type="submit" :disabled="creating || admin.loading">
+                  <UserPlus :size="16" /> Create
+                </button>
+              </div>
+            </form>
+
             <section class="panel stack" style="padding:18px">
               <h2 style="margin:0">User directory</h2>
               <div v-for="user in admin.users" :key="user.id" class="activity-row" style="display:grid; gap:16px;">
@@ -150,7 +205,7 @@ onMounted(() => {
                       </button>
                     </form>
                   </template>
-                  <button v-else class="button secondary" style="min-height:28px; padding:4px 8px; font-size:0.78rem; border-radius:999px" @click="startAssign(user.id)">
+                  <button v-else-if="!user.is_instance_admin" class="button secondary" style="min-height:28px; padding:4px 8px; font-size:0.78rem; border-radius:999px" @click="startAssign(user.id)">
                     <UserPlus :size="14" /> Assign Team
                   </button>
                 </div>

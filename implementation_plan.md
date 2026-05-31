@@ -48,13 +48,13 @@ graph TB
 
 - The application is team-scoped: every item, tag, activity entry, comment, and progress update must belong to a team directly or through an item.
 - Team members can collaborate on items in real time. Guests, public sharing, and cross-team visibility are out of scope for V1.
-- The application also has an instance-level administrator role for tenant management. Instance admins can see every team in the deployment, inspect each team's members, change team member roles, remove members, and create items in any team. This is separate from per-team `admin` / `member` membership roles.
+- The application also has an instance-level administrator role for tenant management. Instance admins can see and manage team/member definitions across the deployment, but they are not team members and cannot access or mutate team tracking content. This is separate from per-team `admin` / `member` membership roles.
 - Dashboard supports both Kanban and list views in V1.
 - Progress updates and comments are text-only in V1; file attachments are deferred.
 - @mentions, notification delivery, subtasks, recurring tasks, and custom workflow columns are deferred.
 - SQLite is acceptable for the expected small-team public deployment as long as the backend runs as a single instance with a persistent disk/volume.
 - V1 uses hard deletes for items/tags where allowed, while `activity_log.details` keeps enough denormalized context to explain what happened later.
-- The first creator of a team becomes `admin`; users who join through an invite code become `member` by default.
+- Instance admins create teams and assign users to teams with `admin` or `member` roles. Users do not self-create or self-join teams.
 
 ### Implementation Guardrails
 
@@ -274,9 +274,9 @@ Schema fields to consider before implementation:
 ### Teams
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/teams` | Create a new team |
+| POST | `/api/teams` | Create a new team (instance admin only) |
 | GET | `/api/teams` | List user's teams |
-| POST | `/api/teams/join` | Join team via invite code |
+| POST | `/api/teams/join` | Disabled; membership is instance-admin managed |
 | GET | `/api/teams/:id/members` | List team members |
 | PUT | `/api/teams/:id` | Update team info (admin) |
 
@@ -323,7 +323,7 @@ Schema fields to consider before implementation:
 |---|---|---|
 | PATCH | `/api/teams/:id/members/:userId` | Change member role (admin only) |
 | DELETE | `/api/teams/:id/members/:userId` | Remove member or leave team |
-| POST | `/api/teams/:id/invite-code/regenerate` | Regenerate invite code (admin only) |
+| POST | `/api/teams/:id/invite-code/regenerate` | Disabled; membership is instance-admin managed |
 | PUT | `/api/tags/:id` | Rename/recolor a tag (admin only) |
 | DELETE | `/api/tags/:id` | Delete a tag and item tag links |
 
@@ -357,27 +357,25 @@ Suggested validation limits:
 
 Default V1 policy:
 
-Actor columns are additive. For example, a normal member who created an item gets the `Creator` permissions for that item.
+Instance admins are tenant managers, not virtual team admins for tracking content.
 
-| Action | Admin | Member | Creator | Assignee |
-|---|---:|---:|---:|---:|
-| View team data | Yes | Yes | Yes | Yes |
-| Update team settings | Yes | No | No | No |
-| Regenerate invite code | Yes | No | No | No |
-| Manage members/roles | Yes | No | No | No |
-| Create item | Yes | Yes | Yes | Yes |
-| Edit any item metadata | Yes | No | No | No |
-| Edit own created item | Yes | No | Yes | No |
-| Change assigned item status | Yes | No | Yes | Yes |
-| Delete any item | Yes | No | No | No |
-| Delete own created item | Yes | No | Yes | No |
-| Create comments/updates | Yes | Yes | Yes | Yes |
-| Manage tags | Yes | No | No | No |
-| View activity feed | Yes | Yes | Yes | Yes |
+| Action | Instance admin | Team admin | Team member |
+|---|---:|---:|---:|
+| View all team/member definitions | Yes | Own team | Own team |
+| Create/delete teams | Yes | No | No |
+| Update own team settings | Yes | Yes | No |
+| Manage members/roles | Yes | Own team | No |
+| Self-create or self-join teams | No | No | No |
+| View team tracking content | No | Yes | Yes |
+| Create/edit/delete items | No | Yes | Yes |
+| Change item status | No | Yes | Yes |
+| Create comments/updates | No | Yes | Yes |
+| Manage tags | No | Yes | No |
+| View activity feed | No | Yes | Yes |
 
 Notes:
 
-- Users must be team members before accessing any team-scoped resource.
+- Users must be real team members before accessing any tracking resource under a team.
 - Returning `404` instead of `403` for resources outside the user's teams avoids leaking existence.
 - A team must always have at least one admin. Block removing/demoting the last admin.
 - If a member is removed from a team, decide whether their historical comments/updates remain visible. Recommended V1 behavior: keep history visible and block future access.
@@ -388,7 +386,7 @@ Notes:
 - JWT payload should include only stable identifiers such as `sub`/`userId`; load roles from the database per team.
 - Recommended V1 token expiry: 7 days for local/team use. Shorten this if deployed on the public internet.
 - V1 decision for public deployment: store JWT in a secure httpOnly SameSite cookie so frontend JavaScript cannot read the token directly. Add CSRF protection for state-changing requests.
-- Add basic rate limiting for `/api/auth/login`, `/api/auth/register`, and invite-code joins.
+- Add basic rate limiting for `/api/auth/login` and `/api/auth/register`.
 - Configure CORS with an explicit `CLIENT_ORIGIN`, not `*`, when credentials or auth headers are used.
 - Escape/sanitize all user-generated text on render. Treat comments and progress updates as plain text, not HTML.
 - Keep `JWT_SECRET`, database path, and client origin in `.env`.
@@ -414,7 +412,7 @@ Additional events recommended for consistency:
 | `tag_deleted` | Server -> Client | `{ tagId, teamId }` | Remove tag from filters/cards |
 | `member_joined` | Server -> Client | `{ member }` | Team member list changed |
 | `member_removed` | Server -> Client | `{ userId, teamId }` | Team member removed |
-| `team_updated` | Server -> Client | `{ team }` | Team name/description/invite state changed |
+| `team_updated` | Server -> Client | `{ team }` | Team name/description changed |
 
 ### Realtime Semantics
 
@@ -435,12 +433,12 @@ Additional events recommended for consistency:
 | Page | Route | Description |
 |---|---|---|
 | **Login / Register** | `/login`, `/register` | Auth forms with smooth transitions |
-| **Team Selector** | `/teams` | List teams, create/join team |
+| **Team Directory** | `/teams` | Read-only list of teams assigned to the current user |
 | **Dashboard** | `/team/:id` | Main view — items by status (Kanban or list), filters, search |
 | **Item Detail** | `/team/:id/item/:itemId` | Full item view with progress timeline, comments, metadata |
 | **My Items** | `/team/:id/my-items` | Personal filtered view |
 | **Activity Feed** | `/team/:id/activity` | Global team activity stream |
-| **Team Settings** | `/team/:id/settings` | Manage members, invite code, team info |
+| **Team Settings** | `/team/:id/settings` | Manage account settings and team-specific settings where allowed |
 | **Admin Console** | `/admin` | Instance-level team/member overview for instance admins |
 
 ### Key Components
@@ -461,7 +459,7 @@ Additional events recommended for consistency:
 | `FilterBar` | Status / assignee / tag / search filters |
 | `ActivityFeed` | Live-updating activity stream |
 | `CreateItemModal` | Modal form to create new item |
-| `InviteCodeDisplay` | Shows copyable team invite code |
+| `TeamDirectory` | Shows teams assigned to the current user |
 
 ### Frontend State & UX Rules
 
@@ -620,8 +618,8 @@ Operational notes:
 8. Add backend test harness with a temporary SQLite database
 
 ### Phase 2 — Backend Features
-1. Teams CRUD + invite code join
-2. Team member management and invite-code regeneration
+1. Instance-admin team CRUD
+2. Team member assignment and role management
 3. Items CRUD with filters, pagination, sorting, and permission checks
 4. Progress updates endpoints
 5. Comments endpoints
@@ -637,7 +635,7 @@ Operational notes:
 3. Configure Vue Router, Pinia, Axios interceptors, Socket.io client
 4. Build auth pages (Login / Register)
 5. Build protected route guards and auth persistence
-6. Build team selector page with create/join flows and error states
+6. Build read-only team directory page with empty states
 
 ### Phase 4 — Frontend Features
 1. Dashboard — Kanban board view with item cards
@@ -646,7 +644,7 @@ Operational notes:
 4. Filter bar (status, assignee, tags, search)
 5. My Items view
 6. Activity feed page
-7. Team settings page with members, roles, and invite code management
+7. Team settings page with members and roles where allowed
 8. Loading, empty, error, validation, and reconnecting states across views
 
 ### Phase 5 — Real-time & Polish
@@ -666,12 +664,12 @@ Operational notes:
 - Run migrations against a fresh temporary SQLite database.
 - Backend integration tests:
   - register/login/me
-  - team create/join/list
+  - instance-admin team create and user assignment; member team list
   - permission denial for non-members
   - item create/list/filter/update/delete
   - comments/progress updates creation
   - activity log generation
-  - invite code duplicate/invalid flows
+  - duplicate team/user assignment flows
 - Socket.io tests:
   - unauthenticated socket rejected
   - non-member cannot join team room
@@ -688,7 +686,7 @@ Operational notes:
 
 ### Manual Verification
 1. **Auth flow**: Register → Login → see user info
-2. **Team flow**: Create team → copy invite code → second user joins
+2. **Team flow**: Instance admin creates team → creates/assigns users → users see the team in their directory
 3. **Item flow**: Create item → assign → change status → verify Kanban updates
 4. **Progress updates**: Post update → verify it appears in real-time for other users
 5. **Comments**: Post comment → verify real-time delivery

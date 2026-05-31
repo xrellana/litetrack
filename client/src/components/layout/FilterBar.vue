@@ -5,7 +5,8 @@ import { Search, RotateCcw } from 'lucide-vue-next';
 const props = defineProps({
   modelValue: { type: Object, required: true },
   members: { type: Array, default: () => [] },
-  tags: { type: Array, default: () => [] }
+  tags: { type: Array, default: () => [] },
+  hideAssignee: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue', 'reset']);
@@ -50,7 +51,7 @@ function push() {
         <option value="done">Done</option>
       </select>
     </label>
-    <label class="field" style="gap:0">
+    <label v-if="!hideAssignee" class="field" style="gap:0">
       <span class="muted">Assignee</span>
       <select v-model="local.assignee" class="select" @change="push">
         <option value="">Anyone</option>
@@ -63,7 +64,7 @@ function push() {
       <span class="muted">Tag</span>
       <select v-model="local.tag" class="select" @change="push">
         <option value="">Any tag</option>
-        <option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
+        <option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.display_name || tag.name }}</option>
       </select>
     </label>
     <button class="button secondary" type="button" @click="emit('reset')">

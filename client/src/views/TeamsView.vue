@@ -1,36 +1,28 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Plus } from 'lucide-vue-next';
+import { BriefcaseBusiness, Settings } from 'lucide-vue-next';
 import AppHeader from '../components/layout/AppHeader.vue';
-import { useAuthStore } from '../stores/auth';
 import { useTeamsStore } from '../stores/teams';
 
 const router = useRouter();
-const auth = useAuthStore();
 const teams = useTeamsStore();
 const error = ref('');
-const createForm = reactive({ name: '', description: '' });
+const loaded = ref(false);
+const adminTeams = computed(() => teams.teams.filter((team) => team.role === 'admin'));
 
-onMounted(() => teams.fetchTeams().catch((err) => {
-  error.value = err.message;
-}));
-
-async function createTeam() {
-  error.value = '';
+onMounted(async () => {
   try {
-    const team = await teams.createTeam(createForm);
-    createForm.name = '';
-    createForm.description = '';
-    await router.push(`/team/${team.id}`);
+    await teams.fetchTeams();
+    if (!adminTeams.value.length) {
+      await router.replace({ name: 'work' });
+    }
   } catch (err) {
     error.value = err.message;
+  } finally {
+    loaded.value = true;
   }
-}
-
-function roleLabel(role) {
-  return role === 'instance_admin' ? 'instance admin' : role;
-}
+});
 </script>
 
 <template>
@@ -41,49 +33,44 @@ function roleLabel(role) {
         <div>
           <h1 class="page-title">Teams</h1>
           <p class="muted">
-            {{ auth.user?.is_instance_admin ? 'Instance admins can see every team in this deployment.' : 'Choose a workspace or create a new one.' }}
+            Teams you administer. Review team details or jump straight into team-scoped work.
           </p>
         </div>
+        <RouterLink class="button secondary" :to="{ name: 'work' }">
+          <BriefcaseBusiness :size="17" /> Work
+        </RouterLink>
       </div>
 
       <div v-if="error" class="error-box">{{ error }}</div>
 
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
-        <form class="panel stack" style="padding:18px" @submit.prevent="createTeam">
-          <h2 style="margin:0">Create team</h2>
-          <label class="field">
-            <span>Name</span>
-            <input v-model="createForm.name" class="input" maxlength="80" required />
-          </label>
-          <label class="field">
-            <span>Description</span>
-            <textarea v-model="createForm.description" class="textarea" maxlength="5000" />
-          </label>
-          <button class="button" type="submit" :disabled="teams.loading">
-            <Plus :size="17" /> Create
-          </button>
-        </form>
-      </div>
-
-      <div class="grid team-grid">
-        <button
-          v-for="team in teams.teams"
+      <div v-if="teams.loading || !loaded" class="empty">Loading teams...</div>
+      <div v-else-if="adminTeams.length" class="team-list panel">
+        <article
+          v-for="team in adminTeams"
           :key="team.id"
-          class="team-tile"
-          type="button"
-          @click="router.push(`/team/${team.id}`)"
+          class="team-list-row"
         >
-          <span>
+          <div>
             <strong style="font-size:1.18rem">{{ team.name }}</strong>
             <small class="muted" style="display:block">{{ team.description || 'No description' }}</small>
-          </span>
-          <span class="item-meta">
-            <span class="badge in_progress">{{ roleLabel(team.role) }}</span>
+          </div>
+          <div class="item-meta">
+            <span class="badge in_progress">team admin</span>
             <span class="muted">{{ team.member_count }} members</span>
-          </span>
-        </button>
+          </div>
+          <div class="team-row-actions">
+            <RouterLink class="button secondary" :to="{ name: 'work', query: { teams: team.id } }">
+              <BriefcaseBusiness :size="17" /> Work
+            </RouterLink>
+            <RouterLink class="button" :to="{ name: 'team-manage', params: { id: team.id } }">
+              <Settings :size="17" /> Settings
+            </RouterLink>
+          </div>
+        </article>
       </div>
-      <div v-if="!teams.loading && !teams.teams.length" class="empty">No teams yet.</div>
+      <div v-else class="empty">
+        Team administration is only available for teams where you are an admin.
+      </div>
     </section>
   </main>
 </template>

@@ -8,12 +8,22 @@ const routes = [
   { path: '/admin', name: 'admin-overview', component: () => import('../views/admin/AdminOverview.vue'), meta: { requiresAuth: true, requiresInstanceAdmin: true } },
   { path: '/admin/teams', name: 'admin-teams', component: () => import('../views/admin/AdminTeams.vue'), meta: { requiresAuth: true, requiresInstanceAdmin: true } },
   { path: '/admin/users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { requiresAuth: true, requiresInstanceAdmin: true } },
+  { path: '/work', name: 'work', component: () => import('../views/WorkView.vue'), meta: { requiresAuth: true } },
+  { path: '/my-items', name: 'global-my-items', component: () => import('../views/WorkView.vue'), meta: { requiresAuth: true } },
   { path: '/teams', name: 'teams', component: () => import('../views/TeamsView.vue'), meta: { requiresAuth: true } },
-  { path: '/team/:id', name: 'dashboard', component: () => import('../views/DashboardView.vue'), meta: { requiresAuth: true } },
+  { path: '/settings', name: 'settings', component: () => import('../views/UserSettingsView.vue'), meta: { requiresAuth: true, allowInstanceAdmin: true } },
+  {
+    path: '/team/:id',
+    name: 'dashboard',
+    redirect: (to) => ({ name: 'work', query: { teams: to.params.id } })
+  },
   { path: '/team/:id/item/:itemId', name: 'item-detail', component: () => import('../views/ItemDetailView.vue'), meta: { requiresAuth: true } },
-  { path: '/team/:id/my-items', name: 'my-items', component: () => import('../views/MyItemsView.vue'), meta: { requiresAuth: true } },
-  { path: '/team/:id/activity', name: 'activity', component: () => import('../views/ActivityView.vue'), meta: { requiresAuth: true } },
-  { path: '/team/:id/settings', name: 'settings', component: () => import('../views/UserSettingsView.vue'), meta: { requiresAuth: true } },
+  {
+    path: '/team/:id/my-items',
+    redirect: (to) => ({ name: 'global-my-items', query: { teams: to.params.id } })
+  },
+  { path: '/team/:id/activity', redirect: (to) => ({ name: 'work', query: { teams: to.params.id } }) },
+  { path: '/team/:id/settings', redirect: { name: 'settings' } },
   { path: '/team/:id/team', name: 'team-manage', component: () => import('../views/TeamManageView.vue'), meta: { requiresAuth: true } }
 ];
 
@@ -39,7 +49,7 @@ router.beforeEach(async (to) => {
   // Handle Instance Admin Routing
   if (auth.isAuthenticated && auth.user?.is_instance_admin) {
     // Prevent access to non-admin authenticated routes
-    if (to.meta.requiresAuth && !to.meta.requiresInstanceAdmin) {
+    if (to.meta.requiresAuth && !to.meta.requiresInstanceAdmin && !to.meta.allowInstanceAdmin) {
       return { name: 'admin-overview' };
     }
     // Redirect from public routes to admin instead of home

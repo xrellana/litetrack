@@ -30,8 +30,14 @@ export function useRealtime(teamIdRef) {
 
   const stop = watch(
     teamIdRef,
-    async (teamId) => {
-      if (teamId) await joinTeamRoom(Number(teamId));
+    async (value) => {
+      const teamIds = Array.isArray(value) ? value : [value];
+      await Promise.all(
+        teamIds
+          .map((teamId) => Number(teamId))
+          .filter((teamId) => Number.isInteger(teamId) && teamId > 0)
+          .map((teamId) => joinTeamRoom(teamId))
+      );
     },
     { immediate: true }
   );

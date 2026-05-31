@@ -35,7 +35,7 @@ function registerSocketHandlers(io) {
         const teamId = Number(payload && payload.teamId);
         if (!Number.isInteger(teamId) || teamId <= 0) throw new Error('INVALID_TEAM');
         const membership = await getMembership(db, teamId, socket.user.id);
-        if (!membership && !await isInstanceAdmin(db, socket.user.id)) throw new Error('FORBIDDEN');
+        if (!membership || await isInstanceAdmin(db, socket.user.id)) throw new Error('FORBIDDEN');
         await socket.join(`team:${teamId}`);
         if (callback) callback({ ok: true });
       } catch (error) {

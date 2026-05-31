@@ -13,7 +13,7 @@ async function submit() {
   error.value = '';
   try {
     await auth.register(form);
-    await router.push('/teams');
+    await router.push('/');
   } catch (err) {
     error.value = err.message;
   }
@@ -27,13 +27,13 @@ async function submit() {
         <div class="brand-mark">LT</div>
         <div>
           <h1>LiteTrack</h1>
-          <p>Create a team workspace, invite members, and track status changes as they happen.</p>
+          <p>Track team work across every workspace assigned to your account.</p>
         </div>
       </div>
       <form class="auth-form stack" @submit.prevent="submit">
         <div>
           <h2 style="margin:0">Register</h2>
-          <p class="muted" style="margin:4px 0 0">First team creators become admins.</p>
+          <p class="muted" style="margin:4px 0 0">An instance admin can add you to the right teams.</p>
         </div>
         <div v-if="error" class="error-box">{{ error }}</div>
         <label class="field">
@@ -63,4 +63,3 @@ async function submit() {
     </section>
   </main>
 </template>
-

@@ -26,6 +26,15 @@ export const useAdminStore = defineStore('admin', {
         this.loading = false;
       }
     },
+    async createTeam(payload) {
+      await api.post('/teams', payload);
+      await this.fetchOverview();
+    },
+    async createUser(payload) {
+      const response = await api.post('/admin/users', payload);
+      await this.fetchOverview();
+      return response.data.data;
+    },
     async changeMemberRole(teamId, userId, role) {
       await api.patch(`/teams/${teamId}/members/${userId}`, { role });
       await this.fetchOverview();

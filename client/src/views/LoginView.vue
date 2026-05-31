@@ -14,7 +14,7 @@ async function submit() {
   error.value = '';
   try {
     await auth.login(form);
-    await router.push(route.query.redirect || '/teams');
+    await router.push(route.query.redirect || '/');
   } catch (err) {
     error.value = err.message;
   }
@@ -56,4 +56,3 @@ async function submit() {
     </section>
   </main>
 </template>
-

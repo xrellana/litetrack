@@ -1,12 +1,10 @@
 <script setup>
 import { ref } from 'vue';
-import { useRoute } from 'vue-router';
 import { Save, User } from 'lucide-vue-next';
 import AppHeader from '../components/layout/AppHeader.vue';
 import { useAuthStore } from '../stores/auth';
 import api from '../services/api';
 
-const route = useRoute();
 const auth = useAuthStore();
 const displayName = ref(auth.user?.display_name || '');
 const busy = ref(false);
@@ -67,7 +65,7 @@ async function saveProfile() {
           <button class="button" type="submit" :disabled="busy">
             <Save :size="17" /> Save
           </button>
-          <span v-if="saved" style="color:var(--success);font-size:0.9rem">✓ Saved</span>
+          <span v-if="saved" style="color:var(--success);font-size:0.9rem">Saved</span>
         </div>
       </form>
     </section>

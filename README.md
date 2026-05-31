@@ -43,8 +43,9 @@ Open the app at `http://127.0.0.1:5173/`.
 
 Seeded demo accounts:
 
-- `admin` / `password123`
-- `member` / `password123`
+- `admin` / `password123` - instance admin
+- `teamadmin` / `password123` - team admin
+- `member` / `password123` - team member
 
 ## Verification
 

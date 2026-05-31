@@ -21,7 +21,7 @@ export const useTeamsStore = defineStore('teams', {
       return team?.role || 'member';
     },
     isAdmin() {
-      return this.currentRole === 'admin' || this.currentRole === 'instance_admin';
+      return this.currentRole === 'admin';
     }
   },
   actions: {
@@ -102,24 +102,8 @@ export const useTeamsStore = defineStore('teams', {
       this.setActiveTeam(teamId);
       await Promise.all([this.fetchTeams(), this.fetchMembers(teamId), this.fetchTags(teamId)]);
     },
-    async createTeam(payload) {
-      const response = await api.post('/teams', payload);
-      this.upsertTeam(response.data.data);
-      return response.data.data;
-    },
-    async joinTeam(inviteCode) {
-      const response = await api.post('/teams/join', { invite_code: inviteCode });
-      this.upsertTeam(response.data.data.team);
-      this.upsertMember(response.data.data.member);
-      return response.data.data.team;
-    },
     async updateTeam(teamId, payload) {
       const response = await api.put(`/teams/${teamId}`, payload);
-      this.upsertTeam(response.data.data);
-      return response.data.data;
-    },
-    async regenerateInviteCode(teamId) {
-      const response = await api.post(`/teams/${teamId}/invite-code/regenerate`);
       this.upsertTeam(response.data.data);
       return response.data.data;
     },
@@ -128,9 +112,16 @@ export const useTeamsStore = defineStore('teams', {
       this.upsertMember(response.data.data);
       return response.data.data;
     },
+    async addMemberToTeam(teamId, payload) {
+      const response = await api.post(`/teams/${teamId}/members`, payload);
+      this.upsertMember(response.data.data);
+      await this.fetchTeams();
+      return response.data.data;
+    },
     async removeMemberFromTeam(teamId, userId) {
       await api.delete(`/teams/${teamId}/members/${userId}`);
       this.removeMember(userId, teamId);
+      await this.fetchTeams();
     },
     async createTag(teamId, payload) {
       const response = await api.post(`/teams/${teamId}/tags`, payload);

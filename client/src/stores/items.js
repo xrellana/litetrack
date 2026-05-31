@@ -78,6 +78,23 @@ export const useItemsStore = defineStore('items', {
         this.loading = false;
       }
     },
+    async fetchAllItems(filters = {}) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await api.get('/items', { params: filters });
+        const rows = response.data.data;
+        this.itemsById = { ...this.itemsById, ...Object.fromEntries(rows.map((item) => [item.id, item])) };
+        this.viewIds = rows.map((item) => item.id);
+        this.page = response.data.page;
+        return rows;
+      } catch (error) {
+        this.error = error.message;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
     async fetchItem(itemId) {
       this.loading = true;
       this.error = null;
@@ -122,4 +139,3 @@ export const useItemsStore = defineStore('items', {
     }
   }
 });
-

@@ -45,7 +45,7 @@ async function saveEdit(payload) {
 async function deleteItem() {
   if (!window.confirm('Delete this item?')) return;
   await items.deleteItem(itemId.value);
-  await router.push(`/team/${teamId.value}`);
+  await router.push({ name: 'work', query: { teams: teamId.value } });
 }
 
 async function postUpdate(payload) {
@@ -73,8 +73,8 @@ onMounted(load);
   <main class="page-shell">
     <AppHeader />
     <section class="section">
-      <button class="button secondary" type="button" style="width:max-content" @click="router.push(`/team/${teamId}`)">
-        Back to dashboard
+      <button class="button secondary" type="button" style="width:max-content" @click="router.push({ name: 'work', query: { teams: teamId } })">
+        Back to Work
       </button>
       <div v-if="items.error" class="error-box">{{ items.error }}</div>
       <div v-if="items.loading || !items.activeItem" class="empty">Loading item...</div>
@@ -123,4 +123,3 @@ onMounted(load);
     />
   </main>
 </template>
-

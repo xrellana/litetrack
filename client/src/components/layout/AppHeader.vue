@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
-import { Activity, Home, LayoutDashboard, ListTodo, LogOut, Settings, ShieldCheck, Users, WifiOff, Sun, Moon, Monitor } from 'lucide-vue-next';
+import { BriefcaseBusiness, LogOut, Settings, ShieldCheck, Users, WifiOff, Sun, Moon, Monitor } from 'lucide-vue-next';
 import UserAvatar from '../common/UserAvatar.vue';
 import { socketState } from '../../services/socket';
 import { useAuthStore } from '../../stores/auth';
@@ -13,7 +13,10 @@ const teams = useTeamsStore();
 const { themePref, cycleTheme } = useTheme();
 const route = useRoute();
 const router = useRouter();
-const teamId = computed(() => Number(route.params.id || teams.activeTeamId));
+const teamId = computed(() => Number(route.params.id) || null);
+const workActive = computed(() => ['work', 'global-my-items'].includes(route.name));
+const teamsActive = computed(() => route.name === 'teams' || route.path.startsWith('/team/'));
+const hasTeamAdminAccess = computed(() => teams.teams.some((team) => team.role === 'admin'));
 
 async function handleLogout() {
   await auth.logout();
@@ -25,7 +28,7 @@ async function handleLogout() {
   <header class="topbar">
     <RouterLink class="avatar-row" to="/">
       <span class="brand-mark">LT</span>
-      <strong>{{ teams.activeTeam?.name || 'LiteTrack' }}</strong>
+      <strong>LiteTrack</strong>
     </RouterLink>
 
     <nav v-if="auth.user?.is_instance_admin" class="nav-links" aria-label="Admin navigation">
@@ -33,26 +36,13 @@ async function handleLogout() {
       <RouterLink class="nav-link" :to="{ name: 'admin-teams' }"><Users :size="17" /> Teams</RouterLink>
       <RouterLink class="nav-link" :to="{ name: 'admin-users' }"><Users :size="17" /> Users</RouterLink>
     </nav>
-    <nav v-else-if="teamId" class="nav-links" aria-label="Team navigation">
-      <RouterLink class="nav-link" :to="{ name: 'dashboard', params: { id: teamId } }">
-        <LayoutDashboard :size="17" /> Dashboard
+    <nav v-else class="nav-links" aria-label="Work navigation">
+      <RouterLink class="nav-link" :class="{ 'router-link-active': workActive }" :to="{ name: 'work' }">
+        <BriefcaseBusiness :size="17" /> Work
       </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'my-items', params: { id: teamId } }">
-        <ListTodo :size="17" /> My Items
+      <RouterLink v-if="hasTeamAdminAccess" class="nav-link" :class="{ 'router-link-active': teamsActive }" to="/teams">
+        <Users :size="17" /> Teams
       </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'activity', params: { id: teamId } }">
-        <Activity :size="17" /> Activity
-      </RouterLink>
-      <RouterLink v-if="teams.isAdmin" class="nav-link" :to="{ name: 'team-manage', params: { id: teamId } }">
-        <Users :size="17" /> Team
-      </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'settings', params: { id: teamId } }">
-        <Settings :size="17" /> Settings
-      </RouterLink>
-    </nav>
-    <nav v-else class="nav-links">
-      <RouterLink class="nav-link" to="/"><Home :size="17" /> Home</RouterLink>
-      <RouterLink class="nav-link" to="/teams"><Users :size="17" /> Teams</RouterLink>
     </nav>
 
     <div class="toolbar">
@@ -64,7 +54,10 @@ async function handleLogout() {
         <UserAvatar :user="auth.user" />
         <strong>{{ auth.user?.display_name }}</strong>
       </span>
-      
+
+      <RouterLink class="button icon secondary" title="Account Settings" :to="{ name: 'settings' }">
+        <Settings :size="18" />
+      </RouterLink>
       <button class="button icon secondary" title="Toggle Theme" @click="cycleTheme">
         <Sun v-if="themePref === 'light'" :size="18" />
         <Moon v-else-if="themePref === 'dark'" :size="18" />
