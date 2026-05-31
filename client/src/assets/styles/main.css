@@ -4,50 +4,52 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* Modern Light Theme */
-  --bg: #f8fafc;
+  /* Refined Light Theme */
+  --bg: #fafafa;
   --bg-2: #ffffff;
-  --surface: rgba(255, 255, 255, 0.9);
+  --surface: rgba(255, 255, 255, 0.85);
   --surface-strong: #ffffff;
-  --surface-soft: rgba(0, 0, 0, 0.03);
-  --border: rgba(148, 163, 184, 0.3);
-  --border-strong: rgba(148, 163, 184, 0.45);
-  --text: #0f172a;
-  --muted: #64748b;
-  --subtle: #94a3b8;
-  --primary: #4f46e5;
-  --primary-strong: #4338ca;
-  --primary-bg: rgba(79, 70, 229, 0.12);
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --violet: #8b5cf6;
-  --shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
-  --radius: 10px;
+  --surface-soft: #f4f4f5;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --text: #18181b;
+  --muted: #71717a;
+  --subtle: #a1a1aa;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --primary-bg: #eff6ff;
+  --primary-text: #ffffff;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --violet: #7c3aed;
+  --shadow: 0 4px 12px rgba(0,0,0,0.05);
+  --radius: 8px;
   --shell-max-width: 1520px;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Premium Dark Theme */
-  --bg: #0b0f19;
-  --bg-2: #111827; 
-  --surface: rgba(17, 24, 39, 0.85);
-  --surface-strong: rgba(31, 41, 55, 0.95);
-  --surface-soft: rgba(255, 255, 255, 0.03);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --text: #f3f4f6;
-  --muted: #9ca3af;
-  --subtle: #6b7280;
-  --primary: #6366f1;
-  --primary-strong: #818cf8;
-  --primary-bg: rgba(99, 102, 241, 0.15);
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
+  /* Refined Dark Theme */
+  --bg: #09090b;
+  --bg-2: #18181b; 
+  --surface: rgba(24, 24, 27, 0.65);
+  --surface-strong: #18181b;
+  --surface-soft: #27272a;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --subtle: #71717a;
+  --primary: #3b82f6;
+  --primary-strong: #60a5fa;
+  --primary-bg: rgba(59, 130, 246, 0.15);
+  --primary-text: #ffffff;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
   --violet: #a78bfa;
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -65,10 +67,6 @@ body {
   margin: 0;
   color: var(--text);
   background: var(--bg);
-  background-image: 
-    radial-gradient(at 0% 0%, var(--primary-bg) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
-  background-attachment: fixed;
 }
 
 button,
@@ -132,10 +130,10 @@ a {
   place-items: center;
   width: 44px;
   height: 44px;
-  border-radius: 8px;
-  color: #ffffff;
+  border-radius: var(--radius);
+  color: var(--primary-text);
   background: var(--primary);
-  box-shadow: 0 12px 32px var(--primary-bg);
+  box-shadow: 0 8px 24px var(--primary-bg);
 }
 
 .auth-brand h1 {
@@ -224,12 +222,12 @@ a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 8px 16px;
   cursor: pointer;
-  color: #ffffff;
+  color: var(--primary-text);
   background: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   transition: transform 160ms ease, filter 160ms ease, background 160ms ease, border-color 160ms ease;
 }
@@ -362,7 +360,7 @@ a {
 }
 
 .segment.active {
-  color: #ffffff;
+  color: var(--primary-text);
   background: var(--primary);
 }
 
@@ -484,10 +482,10 @@ a {
   display: inline-grid;
   place-items: center;
   border-radius: 50%;
-  color: #ffffff;
+  color: var(--primary-text);
   background: var(--primary);
   font-size: 0.78rem;
-  font-weight: 850;
+  font-weight: 600;
   flex: 0 0 auto;
 }
 
