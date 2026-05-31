@@ -7,6 +7,7 @@ import { socketState } from '../../services/socket';
 import { useAuthStore } from '../../stores/auth';
 import { useTeamsStore } from '../../stores/teams';
 import { useTheme } from '../../composables/useTheme';
+import LanguageSwitcher from '../LanguageSwitcher.vue';
 
 const auth = useAuthStore();
 const teams = useTeamsStore();
@@ -54,6 +55,8 @@ async function handleLogout() {
         <UserAvatar :user="auth.user" />
         <strong>{{ auth.user?.display_name }}</strong>
       </span>
+
+      <LanguageSwitcher />
 
       <RouterLink class="button icon secondary" title="Account Settings" :to="{ name: 'settings' }">
         <Settings :size="18" />

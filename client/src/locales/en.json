@@ -1,0 +1,12 @@
+{
+  "footer": {
+    "about": "About",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact Us",
+    "rights": "All rights reserved."
+  },
+  "nav": {
+    "switchLang": "Switch Language"
+  }
+}

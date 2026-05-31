@@ -24,6 +24,7 @@
   --violet: #8b5cf6;
   --shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
   --radius: 10px;
+  --shell-max-width: 1520px;
 }
 
 :root[data-theme="dark"] {
@@ -88,11 +89,13 @@ a {
 
 #app {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .auth-shell,
 .page-shell {
-  min-height: 100vh;
+  flex: 1;
   padding: 28px;
 }
 
@@ -267,7 +270,8 @@ a {
 }
 
 .page-shell {
-  max-width: 1520px;
+  width: 100%;
+  max-width: var(--shell-max-width);
   margin: 0 auto;
 }
 

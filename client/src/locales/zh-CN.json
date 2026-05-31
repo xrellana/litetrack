@@ -1,0 +1,12 @@
+{
+  "footer": {
+    "about": "关于我们",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "contact": "联系我们",
+    "rights": "保留所有权利。"
+  },
+  "nav": {
+    "switchLang": "切换语言"
+  }
+}

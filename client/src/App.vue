@@ -4,5 +4,9 @@
       <component :is="Component" />
     </Transition>
   </RouterView>
+  <AppFooter />
 </template>
 
+<script setup>
+import AppFooter from './components/Footer.vue';
+</script>
