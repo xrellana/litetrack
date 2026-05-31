@@ -8,7 +8,6 @@ import ActivityFeed from '../components/detail/ActivityFeed.vue';
 import CreateItemModal from '../components/items/CreateItemModal.vue';
 import ItemList from '../components/items/ItemList.vue';
 import { useRealtime } from '../composables/useRealtime';
-import { useActivityStore } from '../stores/activity';
 import { useAuthStore } from '../stores/auth';
 import { useItemsStore, STATUSES } from '../stores/items';
 import { useTeamsStore } from '../stores/teams';
@@ -18,7 +17,6 @@ const router = useRouter();
 const auth = useAuthStore();
 const teams = useTeamsStore();
 const items = useItemsStore();
-const activity = useActivityStore();
 const showCreate = ref(false);
 const modalTeamId = ref(null);
 const modalError = ref('');
@@ -54,15 +52,7 @@ const members = computed(() => {
   return [...byUser.values()].sort((a, b) => a.user.display_name.localeCompare(b.user.display_name));
 });
 const modalMembers = computed(() => teams.membersForTeam(modalTeamId.value));
-const workActivityRows = computed(() => {
-  const visibleTeams = new Set(relevantTeamIds.value.map(Number));
-  return activity.rows
-    .filter((row) => visibleTeams.has(Number(row.team_id)))
-    .map((row) => ({
-      ...row,
-      team: teams.teams.find((team) => team.id === Number(row.team_id)) || null
-    }));
-});
+
 
 useRealtime(teamIdsForRealtime);
 
@@ -73,8 +63,7 @@ async function loadContext() {
   ]));
   loaded.value = true;
   await Promise.all([
-    fetchItems(),
-    fetchWorkActivity().catch(() => {})
+    fetchItems()
   ]);
 }
 
@@ -82,9 +71,7 @@ async function fetchItems() {
   await items.fetchAllItems(filters.value);
 }
 
-async function fetchWorkActivity() {
-  await activity.fetchActivityForTeams(relevantTeamIds.value, { limit: 20 });
-}
+
 
 function replaceQuery(next) {
   router.replace({ query: { ...route.query, ...next, view: undefined, offset: undefined } });
@@ -141,7 +128,7 @@ async function createItem(payload) {
     const targetTeamId = payload.team_id || modalTeamId.value;
     const { team_id, ...itemPayload } = payload;
     await items.createItem(targetTeamId, itemPayload);
-    await Promise.all([fetchItems(), fetchWorkActivity().catch(() => {})]);
+    await fetchItems();
     showCreate.value = false;
   } catch (error) {
     modalError.value = error.message;
@@ -162,7 +149,7 @@ function openItem(item) {
 onMounted(loadContext);
 watch(() => route.query, () => {
   if (loaded.value) {
-    Promise.all([fetchItems(), fetchWorkActivity().catch(() => {})]);
+    fetchItems();
   }
 }, { deep: true });
 </script>
@@ -241,17 +228,7 @@ watch(() => route.query, () => {
         </span>
       </div>
 
-      <section v-if="teams.teams.length" class="work-activity-section">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Activity</h2>
-            <p class="muted">Recent updates from the teams currently visible in Work.</p>
-          </div>
-        </div>
-        <div v-if="activity.error" class="error-box">{{ activity.error }}</div>
-        <div v-else-if="activity.loading" class="empty compact">Loading activity...</div>
-        <ActivityFeed v-else :rows="workActivityRows" show-team />
-      </section>
+
     </section>
 
     <CreateItemModal
