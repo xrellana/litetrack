@@ -506,7 +506,7 @@ a {
   padding: 12px;
   border-bottom: 1px solid var(--border);
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .list-table th {
