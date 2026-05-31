@@ -230,7 +230,7 @@
     "displayName": "Display Name",
     "usernamePlaceholder": "e.g. jdoe",
     "displayNamePlaceholder": "e.g. John Doe",
-    "emailPlaceholder": "e.g. jdoe@example.com",
+    "emailPlaceholder": "e.g. jdoe{'@'}example.com",
     "passwordPlaceholder": "Min 8 characters",
     "userTable": {
       "user": "User",
