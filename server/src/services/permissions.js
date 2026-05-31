@@ -156,14 +156,6 @@ async function ensureAssigneeIsMember(db, teamId, assignedTo) {
   }
 }
 
-async function ensureTagsBelongToTeam(db, teamId, tagIds = []) {
-  if (!tagIds.length) return;
-  const rows = await db('tags').whereIn('id', tagIds).andWhere({ team_id: teamId });
-  if (rows.length !== tagIds.length) {
-    throw new AppError(400, 'VALIDATION_ERROR', 'All tags must belong to the item team.');
-  }
-}
-
 async function countAdmins(db, teamId) {
   const row = await db('team_members')
     .join('users', 'users.id', 'team_members.user_id')
@@ -221,15 +213,6 @@ async function hydrateItems(db, items) {
   if (!items.length) return [];
   const ids = items.map((item) => item.id);
   const teamIds = [...new Set(items.map((item) => item.team_id).filter(Boolean))];
-  const tags = await db('item_tags')
-    .join('tags', 'tags.id', 'item_tags.tag_id')
-    .select('item_tags.item_id', 'tags.id', 'tags.name', 'tags.color')
-    .whereIn('item_tags.item_id', ids);
-  const tagsByItem = tags.reduce((acc, tag) => {
-    acc[tag.item_id] ||= [];
-    acc[tag.item_id].push({ id: tag.id, name: tag.name, color: tag.color });
-    return acc;
-  }, {});
   const usersById = await hydrateUsers(db, items, ['created_by', 'assigned_to']);
   const teams = teamIds.length
     ? await db('teams').select('id', 'name', 'description').whereIn('id', teamIds)
@@ -239,7 +222,6 @@ async function hydrateItems(db, items) {
     ...item,
     is_pinned: Boolean(item.is_pinned),
     team: teamsById[item.team_id] || null,
-    tags: tagsByItem[item.id] || [],
     creator: usersById[item.created_by] || null,
     assignee: usersById[item.assigned_to] || null
   }));
@@ -279,7 +261,6 @@ module.exports = {
   canEditItem,
   emitTeam,
   ensureAssigneeIsMember,
-  ensureTagsBelongToTeam,
   generateInviteCode,
   getMembership,
   hydrateDiscussionRows,

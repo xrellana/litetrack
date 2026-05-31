@@ -123,23 +123,15 @@ describe('LiteTrack API', () => {
       .send({ team_id: teamId, role: 'admin' });
     expect(assignedTeamAdmin.status).toBe(201);
 
-    const tag = await teamAdmin
-      .post(`/api/teams/${teamId}/tags`)
-      .set('x-csrf-token', teamAdminCsrf)
-      .send({ name: 'API', color: '#34d399' });
-    expect(tag.status).toBe(201);
-
     const item = await teamAdmin
       .post(`/api/teams/${teamId}/items`)
       .set('x-csrf-token', teamAdminCsrf)
       .send({
         title: 'Ship API',
         description: 'Wire the documented endpoints.',
-        priority: 'high',
-        tag_ids: [tag.body.data.id]
+        priority: 'high'
       });
     expect(item.status).toBe(201);
-    expect(item.body.data.tags).toHaveLength(1);
     expect(item.body.data.team.name).toBe('Launch Room');
 
     const globalItems = await teamAdmin.get('/api/items');
@@ -165,11 +157,6 @@ describe('LiteTrack API', () => {
     expect(progress.status).toBe(201);
     expect(progress.body.data.status_change).toBe('in_progress->done');
 
-    const comment = await teamAdmin
-      .post(`/api/items/${item.body.data.id}/comments`)
-      .set('x-csrf-token', teamAdminCsrf)
-      .send({ content: 'Looks ready for UI integration.' });
-    expect(comment.status).toBe(201);
 
     const activity = await teamAdmin.get(`/api/teams/${teamId}/activity`);
     expect(activity.status).toBe(200);
@@ -260,6 +247,31 @@ describe('LiteTrack API', () => {
     expect(createdUser.body.data.is_instance_admin).toBe(false);
     expect(createdUser.body.data.memberships).toHaveLength(0);
 
+    const forbiddenUserUpdate = await teamAdmin
+      .patch(`/api/admin/users/${createdUser.body.data.id}`)
+      .set('x-csrf-token', teamAdminCsrf)
+      .send({ display_name: 'Not Allowed' });
+    expect(forbiddenUserUpdate.status).toBe(403);
+
+    const duplicateEmailUpdate = await instanceAdmin
+      .patch(`/api/admin/users/${createdUser.body.data.id}`)
+      .set('x-csrf-token', instanceAdminCsrf)
+      .send({ email: 'avery@example.com' });
+    expect(duplicateEmailUpdate.status).toBe(409);
+
+    const updatedUser = await instanceAdmin
+      .patch(`/api/admin/users/${createdUser.body.data.id}`)
+      .set('x-csrf-token', instanceAdminCsrf)
+      .send({
+        email: 'riley.renamed@example.com',
+        display_name: 'Riley Renamed',
+        password: 'resetpass123'
+      });
+    expect(updatedUser.status).toBe(200);
+    expect(updatedUser.body.data.email).toBe('riley.renamed@example.com');
+    expect(updatedUser.body.data.display_name).toBe('Riley Renamed');
+    expect(updatedUser.body.data.password_hash).toBeUndefined();
+
     const socket = await connectSocket(baseUrl, teamAdminSocketCookie);
     const joined = await new Promise((resolve) => {
       socket.emit('join_team', { teamId }, resolve);
@@ -275,7 +287,7 @@ describe('LiteTrack API', () => {
     adminSocket.close();
 
     const outsider = request.agent(app);
-    const outsiderLogin = await outsider.post('/api/auth/login').send({ identifier: 'riley', password: 'password123' });
+    const outsiderLogin = await outsider.post('/api/auth/login').send({ identifier: 'riley.renamed@example.com', password: 'resetpass123' });
     expect(outsiderLogin.status).toBe(200);
 
     const hidden = await outsider.get(`/api/teams/${teamId}/items`);
@@ -292,7 +304,7 @@ describe('LiteTrack API', () => {
     const duplicateMember = await teamAdmin
       .post(`/api/teams/${teamId}/members`)
       .set('x-csrf-token', teamAdminCsrf)
-      .send({ identifier: 'riley@example.com', role: 'member' });
+      .send({ identifier: 'riley.renamed@example.com', role: 'member' });
     expect(duplicateMember.status).toBe(409);
 
     const visibleAfterAdd = await outsider.get(`/api/teams/${teamId}/members`);

@@ -16,10 +16,7 @@ export function useRealtime(teamIdRef) {
     item_updated: ({ item }) => items.upsertItem(item),
     item_deleted: ({ itemId }) => items.removeItem(itemId),
     update_posted: ({ update, itemId }) => items.upsertUpdate(itemId, update),
-    comment_posted: ({ comment, itemId }) => items.upsertComment(itemId, comment),
-    tag_created: ({ tag }) => teams.upsertTag(tag),
-    tag_updated: ({ tag }) => teams.upsertTag(tag),
-    tag_deleted: ({ tagId, teamId }) => teams.removeTag(tagId, teamId),
+
     member_joined: ({ member }) => teams.upsertMember(member),
     member_removed: ({ userId, teamId }) => teams.removeMember(userId, teamId),
     team_updated: ({ team }) => teams.upsertTeam(team),

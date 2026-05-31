@@ -35,6 +35,11 @@ export const useAdminStore = defineStore('admin', {
       await this.fetchOverview();
       return response.data.data;
     },
+    async updateUser(userId, payload) {
+      const response = await api.patch(`/admin/users/${userId}`, payload);
+      await this.fetchOverview();
+      return response.data.data;
+    },
     async changeMemberRole(teamId, userId, role) {
       await api.patch(`/teams/${teamId}/members/${userId}`, { role });
       await this.fetchOverview();

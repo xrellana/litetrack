@@ -2,7 +2,6 @@
 import { CalendarClock, Eye, Pin } from 'lucide-vue-next';
 import PriorityIndicator from '../common/PriorityIndicator.vue';
 import StatusBadge from '../common/StatusBadge.vue';
-import TagChip from '../common/TagChip.vue';
 import UserAvatar from '../common/UserAvatar.vue';
 import { STATUSES } from '../../stores/items';
 
@@ -35,9 +34,6 @@ function isOverdue(item) {
       <span v-if="item.due_date" class="badge" :class="isOverdue(item) ? 'urgent' : 'todo'">
         <CalendarClock :size="13" /> {{ item.due_date }}
       </span>
-    </div>
-    <div v-if="item.tags?.length" class="item-meta">
-      <TagChip v-for="tag in item.tags" :key="tag.id" :tag="tag" />
     </div>
     <div class="item-meta" style="justify-content:space-between">
       <span class="avatar-row">

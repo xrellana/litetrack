@@ -5,8 +5,6 @@ exports.seed = async function seed(knex) {
   await knex('activity_log').del();
   await knex('comments').del();
   await knex('progress_updates').del();
-  await knex('item_tags').del();
-  await knex('tags').del();
   await knex('items').del();
   await knex('team_members').del();
   await knex('teams').del();
@@ -49,8 +47,6 @@ exports.seed = async function seed(knex) {
     { team_id: teamId, user_id: memberId, role: 'member' }
   ]);
 
-  const [uiTag] = await knex('tags').insert({ team_id: teamId, name: 'UI', color: '#22d3ee' });
-  const [apiTag] = await knex('tags').insert({ team_id: teamId, name: 'API', color: '#34d399' });
 
   const [itemId] = await knex('items').insert({
     team_id: teamId,
@@ -65,10 +61,7 @@ exports.seed = async function seed(knex) {
     updated_at: now()
   });
 
-  await knex('item_tags').insert([
-    { item_id: itemId, tag_id: uiTag },
-    { item_id: itemId, tag_id: apiTag }
-  ]);
+
   await knex('progress_updates').insert({
     item_id: itemId,
     user_id: memberId,

@@ -1,10 +1,7 @@
 <script setup>
-import { Eye } from 'lucide-vue-next';
 import PriorityIndicator from '../common/PriorityIndicator.vue';
 import StatusBadge from '../common/StatusBadge.vue';
-import TagChip from '../common/TagChip.vue';
 import UserAvatar from '../common/UserAvatar.vue';
-import { STATUSES } from '../../stores/items';
 
 defineProps({
   items: { type: Array, default: () => [] },
@@ -24,27 +21,22 @@ const emit = defineEmits(['open', 'status']);
           <th>Status</th>
           <th>Priority</th>
           <th>Assignee</th>
-          <th>Tags</th>
           <th>Due</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in items" :key="item.id">
+        <tr v-for="item in items" :key="item.id" class="item-list-row-hover">
           <td>
-            <strong>{{ item.title }}</strong>
-            <small v-if="item.description" class="muted" style="display:block">{{ item.description.slice(0, 120) }}</small>
+            <div class="clickable-title" @click="emit('open', item)" role="button" tabindex="0" @keydown.enter="emit('open', item)">
+              <strong class="item-title-text">{{ item.title }}</strong>
+              <small v-if="item.description" class="muted" style="display:block; margin-top: 4px;">{{ item.description.slice(0, 120) }}</small>
+            </div>
           </td>
           <td v-if="showTeam">
             <span class="badge team-badge">{{ item.team?.name || 'Team' }}</span>
           </td>
           <td>
-            <div class="stack-tight">
-              <StatusBadge :status="item.status" />
-              <select class="select" :value="item.status" @change="emit('status', item, $event.target.value)">
-                <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ status.label }}</option>
-              </select>
-            </div>
+            <StatusBadge :status="item.status" />
           </td>
           <td><PriorityIndicator :priority="item.priority" /></td>
           <td>
@@ -53,20 +45,36 @@ const emit = defineEmits(['open', 'status']);
               <small>{{ item.assignee?.display_name || 'Unassigned' }}</small>
             </span>
           </td>
-          <td>
-            <span class="item-meta">
-              <TagChip v-for="tag in item.tags" :key="tag.id" :tag="tag" />
-            </span>
-          </td>
           <td>{{ item.due_date || '-' }}</td>
-          <td>
-            <button class="button icon secondary" type="button" title="Open item" @click="emit('open', item)">
-              <Eye :size="17" />
-            </button>
-          </td>
         </tr>
       </tbody>
     </table>
     <div v-if="!items.length" class="empty" style="margin:14px">No items match this view.</div>
   </div>
 </template>
+
+<style scoped>
+.item-list-row-hover {
+  transition: background-color 150ms ease;
+}
+.item-list-row-hover:hover {
+  background-color: var(--surface-soft);
+}
+.clickable-title {
+  cursor: pointer;
+  padding: 6px 8px;
+  margin: -6px -8px;
+  border-radius: 8px;
+  transition: background-color 150ms ease, transform 150ms ease;
+  outline: none;
+}
+.clickable-title:hover, .clickable-title:focus {
+  background-color: var(--primary-bg);
+}
+.clickable-title:hover .item-title-text, .clickable-title:focus .item-title-text {
+  color: var(--primary);
+}
+.clickable-title:active {
+  transform: scale(0.99);
+}
+</style>

@@ -28,6 +28,14 @@ const createUserSchema = z.object({
   display_name: z.string().trim().min(1).max(80).optional()
 });
 
+const updateUserSchema = z.object({
+  email: z.string().trim().email().optional(),
+  display_name: z.string().trim().min(1).max(80).optional(),
+  password: z.string().min(8).optional()
+}).refine((data) => data.email || data.display_name || data.password, {
+  message: 'At least one user field must be provided.'
+});
+
 const assignTeamSchema = z.object({
   team_id: z.number().int().positive(),
   role: z.enum(['admin', 'member'])
@@ -134,6 +142,31 @@ router.post('/users', validateBody(createUserSchema), asyncHandler(async (req, r
 
   const user = await db('users').select(USER_COLUMNS).where({ id: userId }).first();
   return sendData(res, { ...publicUser(user), memberships: [] }, 201);
+}));
+
+router.patch('/users/:id', validateBody(updateUserSchema), asyncHandler(async (req, res) => {
+  await requireInstanceAdmin(db, req.user.id);
+  const userId = idParam(req.params.id, 'user id');
+
+  const existing = await db('users').select('id').where({ id: userId }).first();
+  if (!existing) throw new AppError(404, 'NOT_FOUND', 'User not found.');
+
+  const updates = {};
+  if (req.body.email) updates.email = normalizeEmail(req.body.email);
+  if (req.body.display_name) updates.display_name = req.body.display_name;
+  if (req.body.password) {
+    const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
+    updates.password_hash = await bcrypt.hash(req.body.password, rounds);
+  }
+
+  try {
+    await db('users').where({ id: userId }).update(updates);
+  } catch (error) {
+    sqliteConflict(error, 'Username or email is already in use.');
+  }
+
+  const user = await db('users').select(USER_COLUMNS).where({ id: userId }).first();
+  return sendData(res, publicUser(user));
 }));
 
 router.delete('/teams/:id', asyncHandler(async (req, res) => {

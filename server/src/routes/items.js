@@ -8,7 +8,6 @@ const {
   canEditItem,
   emitTeam,
   ensureAssigneeIsMember,
-  ensureTagsBelongToTeam,
   hydrateDiscussionRows,
   hydrateItems,
   insertActivity,
@@ -30,8 +29,7 @@ const itemCreateSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
   assigned_to: z.number().int().positive().nullable().optional(),
   due_date: z.string().trim().max(40).nullable().optional(),
-  is_pinned: z.boolean().optional().default(false),
-  tag_ids: z.array(z.number().int().positive()).optional().default([])
+  is_pinned: z.boolean().optional().default(false)
 });
 
 const itemUpdateSchema = z.object({
@@ -42,7 +40,6 @@ const itemUpdateSchema = z.object({
   assigned_to: z.number().int().positive().nullable().optional(),
   due_date: z.string().trim().max(40).nullable().optional(),
   is_pinned: z.boolean().optional(),
-  tag_ids: z.array(z.number().int().positive()).optional(),
   updated_at: z.string().optional()
 }).refine((body) => Object.keys(body).some((key) => key !== 'updated_at'), {
   message: 'At least one item field is required.'
@@ -51,7 +48,6 @@ const itemUpdateSchema = z.object({
 const listQuerySchema = z.object({
   status: z.enum(['todo', 'in_progress', 'done']).optional(),
   assignee: z.coerce.number().int().positive().optional(),
-  tag: z.coerce.number().int().positive().optional(),
   search: z.string().trim().max(140).optional(),
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional()
@@ -62,15 +58,6 @@ const globalListQuerySchema = listQuerySchema.extend({
 });
 
 router.use(authenticate, requireCsrf);
-
-async function replaceItemTags(trx, itemId, teamId, tagIds) {
-  if (tagIds === undefined) return;
-  await ensureTagsBelongToTeam(trx, teamId, tagIds);
-  await trx('item_tags').where({ item_id: itemId }).delete();
-  if (tagIds.length) {
-    await trx('item_tags').insert(tagIds.map((tagId) => ({ item_id: itemId, tag_id: tagId })));
-  }
-}
 
 async function loadItem(itemId) {
   const item = await db('items').where({ id: itemId }).first();
@@ -86,14 +73,6 @@ function applyItemFilters(base, query) {
     const search = `%${query.search}%`;
     base.andWhere((builder) => {
       builder.whereLike('items.title', search).orWhereLike('items.description', search);
-    });
-  }
-  if (query.tag) {
-    base.whereExists(function exists() {
-      this.select(1)
-        .from('item_tags')
-        .whereRaw('item_tags.item_id = items.id')
-        .andWhere('item_tags.tag_id', query.tag);
     });
   }
   return base;
@@ -114,7 +93,6 @@ router.post('/teams/:teamId/items', validateBody(itemCreateSchema), asyncHandler
   const teamId = idParam(req.params.teamId, 'team id');
   await requireMembership(db, teamId, req.user.id);
   await ensureAssigneeIsMember(db, teamId, req.body.assigned_to);
-  await ensureTagsBelongToTeam(db, teamId, req.body.tag_ids);
 
   let itemId;
   let activity;
@@ -131,9 +109,6 @@ router.post('/teams/:teamId/items', validateBody(itemCreateSchema), asyncHandler
       is_pinned: req.body.is_pinned ? 1 : 0,
       updated_at: now()
     });
-    if (req.body.tag_ids.length) {
-      await trx('item_tags').insert(req.body.tag_ids.map((tagId) => ({ item_id: itemId, tag_id: tagId })));
-    }
     activity = await insertActivity(trx, {
       team_id: teamId,
       user_id: req.user.id,
@@ -208,12 +183,10 @@ router.get('/items/:id', asyncHandler(async (req, res) => {
   const itemId = idParam(req.params.id, 'item id');
   const { item } = await requireItemAccess(db, itemId, req.user.id);
   const [hydratedItem] = await hydrateItems(db, [item]);
-  const updates = await db('progress_updates').where({ item_id: itemId }).orderBy('created_at', 'asc');
-  const comments = await db('comments').where({ item_id: itemId }).orderBy('created_at', 'asc');
+  const updates = await db('progress_updates').where({ item_id: itemId }).orderBy('created_at', 'desc');
   return sendData(res, {
     item: hydratedItem,
-    updates: await hydrateDiscussionRows(db, updates),
-    comments: await hydrateDiscussionRows(db, comments)
+    updates: await hydrateDiscussionRows(db, updates)
   });
 }));
 
@@ -224,7 +197,7 @@ router.put('/items/:id', validateBody(itemUpdateSchema), asyncHandler(async (req
     throw new AppError(409, 'CONFLICT', 'Item was changed by someone else. Refresh and try again.');
   }
 
-  const metadataKeys = ['title', 'description', 'priority', 'assigned_to', 'due_date', 'is_pinned', 'tag_ids'];
+  const metadataKeys = ['title', 'description', 'priority', 'assigned_to', 'due_date', 'is_pinned'];
   const touchesMetadata = metadataKeys.some((key) => Object.hasOwn(req.body, key));
   if (touchesMetadata && !canEditItem(membership, item, req.user.id)) {
     throw new AppError(403, 'FORBIDDEN', 'Only admins or the item creator can edit item metadata.');
@@ -235,9 +208,6 @@ router.put('/items/:id', validateBody(itemUpdateSchema), asyncHandler(async (req
 
   if (Object.hasOwn(req.body, 'assigned_to')) {
     await ensureAssigneeIsMember(db, item.team_id, req.body.assigned_to);
-  }
-  if (Object.hasOwn(req.body, 'tag_ids')) {
-    await ensureTagsBelongToTeam(db, item.team_id, req.body.tag_ids);
   }
 
   let activity;
@@ -250,7 +220,6 @@ router.put('/items/:id', validateBody(itemUpdateSchema), asyncHandler(async (req
 
   await db.transaction(async (trx) => {
     await trx('items').where({ id: itemId }).update(updates);
-    await replaceItemTags(trx, itemId, item.team_id, req.body.tag_ids);
     activity = await insertActivity(trx, {
       team_id: item.team_id,
       user_id: req.user.id,

@@ -7,7 +7,6 @@ const props = defineProps({
   show: { type: Boolean, default: false },
   item: { type: Object, default: null },
   members: { type: Array, default: () => [] },
-  tags: { type: Array, default: () => [] },
   availableTeams: { type: Array, default: () => [] },
   selectedTeamId: { type: Number, default: null },
   showTeamSelect: { type: Boolean, default: false },
@@ -25,8 +24,7 @@ const form = reactive({
   assigned_to: '',
   team_id: '',
   due_date: '',
-  is_pinned: false,
-  tag_ids: []
+  is_pinned: false
 });
 
 watch(
@@ -40,7 +38,6 @@ watch(
     form.team_id = props.selectedTeamId || props.item?.team_id || '';
     form.due_date = props.item?.due_date || '';
     form.is_pinned = Boolean(props.item?.is_pinned);
-    form.tag_ids = props.item?.tags?.map((tag) => tag.id) || [];
   },
   { immediate: true }
 );
@@ -54,14 +51,7 @@ watch(
 
 function changeTeam() {
   form.assigned_to = '';
-  form.tag_ids = [];
   emit('team-change', Number(form.team_id));
-}
-
-function toggleTag(tagId) {
-  form.tag_ids = form.tag_ids.includes(tagId)
-    ? form.tag_ids.filter((id) => id !== tagId)
-    : [...form.tag_ids, tagId];
 }
 
 function submit() {
@@ -74,7 +64,6 @@ function submit() {
     assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
     due_date: form.due_date || null,
     is_pinned: form.is_pinned,
-    tag_ids: form.tag_ids,
     updated_at: props.item?.updated_at
   });
 }
@@ -141,21 +130,7 @@ function submit() {
           <input v-model="form.is_pinned" type="checkbox" />
           <Pin :size="16" /> Pin item
         </label>
-        <div class="stack-tight">
-          <strong>Tags</strong>
-          <div class="item-meta">
-            <button
-              v-for="tag in tags"
-              :key="tag.id"
-              class="button secondary"
-              type="button"
-              :style="form.tag_ids.includes(tag.id) ? { borderColor: tag.color, color: tag.color } : {}"
-              @click="toggleTag(tag.id)"
-            >
-              {{ tag.name }}
-            </button>
-          </div>
-        </div>
+
         <div class="toolbar" style="justify-content:flex-end">
           <button class="button secondary" type="button" @click="emit('close')">Cancel</button>
           <button class="button" type="submit" :disabled="busy">

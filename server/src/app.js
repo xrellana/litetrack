@@ -10,8 +10,7 @@ const authRoutes = require('./routes/auth');
 const teamRoutes = require('./routes/teams');
 const itemRoutes = require('./routes/items');
 const updateRoutes = require('./routes/updates');
-const commentRoutes = require('./routes/comments');
-const tagRoutes = require('./routes/tags');
+
 const activityRoutes = require('./routes/activity');
 const adminRoutes = require('./routes/admin');
 const { errorHandler, notFound } = require('./middleware/errors');
@@ -49,8 +48,7 @@ function createApp() {
   app.use('/api/teams', teamRoutes);
   app.use('/api', itemRoutes);
   app.use('/api', updateRoutes);
-  app.use('/api', commentRoutes);
-  app.use('/api', tagRoutes);
+
   app.use('/api', activityRoutes);
   app.use('/api/admin', adminRoutes);
   app.use(notFound);

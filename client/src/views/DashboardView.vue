@@ -25,11 +25,9 @@ const teamId = computed(() => Number(route.params.id));
 const filters = computed(() => ({
   status: route.query.status,
   assignee: route.query.assignee,
-  tag: route.query.tag,
   search: route.query.search
 }));
 const modalMembers = computed(() => teams.membersForTeam(modalTeamId.value || teamId.value));
-const modalTags = computed(() => teams.tagsForTeam(modalTeamId.value || teamId.value));
 
 useRealtime(teamId);
 
@@ -53,14 +51,14 @@ async function openCreate() {
   modalTeamId.value = teamId.value;
   modalError.value = '';
   showCreate.value = true;
-  await Promise.all([teams.fetchMembers(modalTeamId.value), teams.fetchTags(modalTeamId.value)]);
+  await Promise.all([teams.fetchMembers(modalTeamId.value)]);
 }
 
 async function changeModalTeam(nextTeamId) {
   modalTeamId.value = Number(nextTeamId);
   modalError.value = '';
   try {
-    await Promise.all([teams.fetchMembers(modalTeamId.value), teams.fetchTags(modalTeamId.value)]);
+    await Promise.all([teams.fetchMembers(modalTeamId.value)]);
   } catch (error) {
     modalError.value = error.message;
   }
@@ -111,7 +109,6 @@ watch(() => route.query, () => items.fetchItems(teamId.value, filters.value), { 
       <FilterBar
         :model-value="filters"
         :members="teams.members"
-        :tags="teams.tags"
         @update:model-value="updateFilters"
         @reset="resetFilters"
       />
@@ -137,7 +134,6 @@ watch(() => route.query, () => items.fetchItems(teamId.value, filters.value), { 
     <CreateItemModal
       :show="showCreate"
       :members="modalMembers"
-      :tags="modalTags"
       :available-teams="teams.teams"
       :selected-team-id="modalTeamId || teamId"
       :busy="saving"

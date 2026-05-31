@@ -438,7 +438,6 @@ a {
 }
 
 .badge,
-.tag-chip,
 .priority {
   min-height: 24px;
   display: inline-flex;

@@ -33,14 +33,12 @@ const teamIdsForRealtime = computed(() => teams.teams.map((team) => team.id));
 const filters = computed(() => ({
   status: route.query.status,
   assignee: mineOnly.value ? auth.user?.id : route.query.assignee,
-  tag: route.query.tag,
   search: route.query.search,
   teams: route.query.teams
 }));
 const filterModel = computed(() => ({
   status: filters.value.status,
   assignee: mineOnly.value ? '' : filters.value.assignee,
-  tag: filters.value.tag,
   search: filters.value.search
 }));
 const activeTeamSet = computed(() => new Set(selectedTeamIds.value));
@@ -55,15 +53,7 @@ const members = computed(() => {
   });
   return [...byUser.values()].sort((a, b) => a.user.display_name.localeCompare(b.user.display_name));
 });
-const tags = computed(() => relevantTeamIds.value.flatMap((teamId) => {
-  const team = teams.teams.find((row) => row.id === Number(teamId));
-  return teams.tagsForTeam(teamId).map((tag) => ({
-    ...tag,
-    display_name: selectedTeamIds.value.length === 1 ? tag.name : `${tag.name} / ${team?.name || 'Team'}`
-  }));
-}));
 const modalMembers = computed(() => teams.membersForTeam(modalTeamId.value));
-const modalTags = computed(() => teams.tagsForTeam(modalTeamId.value));
 const statusCounts = computed(() => Object.fromEntries(
   STATUSES.map((status) => [status.value, items.items.filter((item) => item.status === status.value).length])
 ));
@@ -82,8 +72,7 @@ useRealtime(teamIdsForRealtime);
 async function loadContext() {
   await teams.fetchTeams();
   await Promise.all(teams.teams.flatMap((team) => [
-    teams.fetchMembers(team.id),
-    teams.fetchTags(team.id)
+    teams.fetchMembers(team.id)
   ]));
   loaded.value = true;
   await Promise.all([
@@ -135,14 +124,14 @@ async function openCreate() {
   modalTeamId.value = defaultTeamId;
   modalError.value = '';
   showCreate.value = true;
-  await Promise.all([teams.fetchMembers(defaultTeamId), teams.fetchTags(defaultTeamId)]);
+  await Promise.all([teams.fetchMembers(defaultTeamId)]);
 }
 
 async function changeModalTeam(nextTeamId) {
   modalTeamId.value = Number(nextTeamId);
   modalError.value = '';
   try {
-    await Promise.all([teams.fetchMembers(modalTeamId.value), teams.fetchTags(modalTeamId.value)]);
+    await Promise.all([teams.fetchMembers(modalTeamId.value)]);
   } catch (error) {
     modalError.value = error.message;
   }
@@ -247,7 +236,6 @@ watch(() => route.query, () => {
       <FilterBar
         :model-value="filterModel"
         :members="mineOnly ? [] : members"
-        :tags="tags"
         :hide-assignee="mineOnly"
         @update:model-value="updateFilters"
         @reset="resetFilters"
@@ -286,7 +274,6 @@ watch(() => route.query, () => {
     <CreateItemModal
       :show="showCreate"
       :members="modalMembers"
-      :tags="modalTags"
       :available-teams="teams.teams"
       :selected-team-id="modalTeamId"
       show-team-select

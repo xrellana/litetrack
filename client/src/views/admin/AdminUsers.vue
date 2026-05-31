@@ -1,6 +1,6 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
-import { ShieldCheck, Trash2, UserPlus, X } from 'lucide-vue-next';
+import { computed, onMounted, reactive, ref, watch, nextTick } from 'vue';
+import { Pencil, Save, ShieldCheck, Trash2, UserPlus, X } from 'lucide-vue-next';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
 import { useAdminStore } from '../../stores/admin';
@@ -19,8 +19,27 @@ const createForm = reactive({
 });
 const creating = ref(false);
 const createError = ref('');
+const showCreateForm = ref(false);
+const userNameInput = ref(null);
 const assigningUserId = ref(null);
 const assignForm = ref({ team_id: '', role: 'member' });
+const editForm = reactive({
+  id: null,
+  display_name: '',
+  email: '',
+  password: ''
+});
+const editing = ref(false);
+const editError = ref('');
+
+// Watch for showCreateForm changes to focus input
+watch(showCreateForm, (val) => {
+  if (val) {
+    nextTick(() => {
+      userNameInput.value?.focus();
+    });
+  }
+});
 
 async function createUser() {
   createError.value = '';
@@ -36,6 +55,7 @@ async function createUser() {
     createForm.email = '';
     createForm.display_name = '';
     createForm.password = '';
+    showCreateForm.value = false;
   } catch (error) {
     createError.value = error.message;
   } finally {
@@ -54,6 +74,47 @@ async function deleteUser(user) {
     await admin.deleteUser(user.id);
   } catch (error) {
     alert(error.message);
+  }
+}
+
+function startEdit(user) {
+  editError.value = '';
+  editForm.id = user.id;
+  editForm.display_name = user.display_name;
+  editForm.email = user.email;
+  editForm.password = '';
+}
+
+function cancelEdit() {
+  editForm.id = null;
+  editForm.display_name = '';
+  editForm.email = '';
+  editForm.password = '';
+  editError.value = '';
+}
+
+async function submitEdit(user) {
+  editError.value = '';
+  editing.value = true;
+  const payload = {
+    display_name: editForm.display_name,
+    email: editForm.email
+  };
+  const password = editForm.password.trim();
+  if (password) {
+    payload.password = password;
+  }
+
+  try {
+    const updatedUser = await admin.updateUser(user.id, payload);
+    if (user.id === auth.user?.id) {
+      auth.user = { ...auth.user, ...updatedUser };
+    }
+    cancelEdit();
+  } catch (error) {
+    editError.value = error.message;
+  } finally {
+    editing.value = false;
   }
 }
 
@@ -120,13 +181,24 @@ onMounted(() => {
               </div>
             </section>
 
-            <form class="panel stack" style="padding:18px" @submit.prevent="createUser">
-              <h2 style="margin:0">Create user</h2>
+            <div v-if="!showCreateForm" class="toolbar" style="margin-bottom: 16px;">
+              <button class="button" @click="showCreateForm = true">
+                <UserPlus :size="16" /> Create user
+              </button>
+            </div>
+
+            <form v-if="showCreateForm" class="panel stack" style="padding:18px" @submit.prevent="createUser">
+              <div class="section-header" style="align-items: center; margin: 0 0 16px 0;">
+                <h2 style="margin:0">Create user</h2>
+                <button class="button icon secondary ghost" type="button" @click="showCreateForm = false" title="Cancel">
+                  <X :size="18" />
+                </button>
+              </div>
               <div v-if="createError" class="error-box">{{ createError }}</div>
               <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
                 <label class="field">
                   <span>Username</span>
-                  <input v-model="createForm.username" class="input" minlength="3" maxlength="32" required />
+                  <input ref="userNameInput" v-model="createForm.username" class="input" minlength="3" maxlength="32" required />
                 </label>
                 <label class="field">
                   <span>Email</span>
@@ -140,6 +212,7 @@ onMounted(() => {
                   <span>Password</span>
                   <input v-model="createForm.password" class="input" type="password" minlength="8" required />
                 </label>
+                <button class="button secondary" type="button" @click="showCreateForm = false">Cancel</button>
                 <button class="button" type="submit" :disabled="creating || admin.loading">
                   <UserPlus :size="16" /> Create
                 </button>
@@ -158,11 +231,47 @@ onMounted(() => {
                     </span>
                   </div>
                   <div class="toolbar">
+                    <button class="button icon secondary" type="button" title="Edit user" :disabled="editing && editForm.id === user.id" @click="startEdit(user)">
+                      <Pencil :size="16" />
+                    </button>
                     <button v-if="user.id !== auth.user?.id" class="button icon danger" type="button" title="Delete user" @click="deleteUser(user)">
                       <Trash2 :size="16" />
                     </button>
                   </div>
                 </div>
+
+                <form
+                  v-if="editForm.id === user.id"
+                  class="grid"
+                  style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft)"
+                  @submit.prevent="submitEdit(user)"
+                >
+                  <div v-if="editError" class="error-box" style="grid-column:1 / -1">{{ editError }}</div>
+                  <label class="field">
+                    <span>Display name</span>
+                    <input v-model="editForm.display_name" class="input" maxlength="80" required :disabled="editing" />
+                  </label>
+                  <label class="field">
+                    <span>Email</span>
+                    <input v-model="editForm.email" class="input" type="email" required :disabled="editing" />
+                  </label>
+                  <label class="field">
+                    <span>New password</span>
+                    <input
+                      v-model="editForm.password"
+                      class="input"
+                      type="password"
+                      minlength="8"
+                      autocomplete="new-password"
+                      placeholder="Leave blank to keep current"
+                      :disabled="editing"
+                    />
+                  </label>
+                  <button class="button secondary" type="button" :disabled="editing" @click="cancelEdit">Cancel</button>
+                  <button class="button" type="submit" :disabled="editing || admin.loading">
+                    <Save :size="16" /> Save
+                  </button>
+                </form>
                 
                 <div class="item-meta" style="padding-top:8px; border-top:1px solid var(--border)">
                   <span v-if="user.is_instance_admin" class="badge in_progress" style="margin-right:8px">instance admin</span>

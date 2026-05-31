@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch, nextTick } from 'vue';
 import { Edit2, Plus, ShieldCheck, Trash2, X, Save } from 'lucide-vue-next';
 import AppHeader from '../../components/layout/AppHeader.vue';
 import UserAvatar from '../../components/common/UserAvatar.vue';
@@ -8,8 +8,19 @@ import { useAdminStore } from '../../stores/admin';
 const admin = useAdminStore();
 const createForm = reactive({ name: '', description: '' });
 const creating = ref(false);
+const showCreateForm = ref(false);
+const teamNameInput = ref(null);
 const editingTeamId = ref(null);
 const editForm = ref({ name: '', description: '' });
+
+// Watch for showCreateForm changes to focus input
+watch(showCreateForm, (val) => {
+  if (val) {
+    nextTick(() => {
+      teamNameInput.value?.focus();
+    });
+  }
+});
 
 async function createTeam() {
   if (!createForm.name.trim()) return;
@@ -18,6 +29,7 @@ async function createTeam() {
     await admin.createTeam(createForm);
     createForm.name = '';
     createForm.description = '';
+    showCreateForm.value = false;
   } finally {
     creating.value = false;
   }
@@ -79,17 +91,29 @@ onMounted(() => {
             <span class="muted">{{ admin.teams.length }} total</span>
           </div>
 
-          <form class="panel stack" style="padding:18px" @submit.prevent="createTeam">
-            <h3 style="margin:0">Create team</h3>
-            <div class="grid" style="grid-template-columns:minmax(220px,1fr) minmax(260px,2fr) auto;align-items:end">
+          <div v-if="!showCreateForm" class="toolbar" style="margin-bottom: 16px;">
+            <button class="button" @click="showCreateForm = true">
+              <Plus :size="17" /> Create team
+            </button>
+          </div>
+
+          <form v-if="showCreateForm" class="panel stack" style="padding:18px" @submit.prevent="createTeam">
+            <div class="section-header" style="align-items: center; margin: 0 0 16px 0;">
+              <h3 style="margin:0">Create team</h3>
+              <button class="button icon secondary ghost" type="button" @click="showCreateForm = false" title="Cancel">
+                <X :size="17" />
+              </button>
+            </div>
+            <div class="grid" style="grid-template-columns:minmax(220px,1fr) minmax(260px,2fr) auto auto;align-items:end">
               <label class="field">
                 <span>Name</span>
-                <input v-model="createForm.name" class="input" maxlength="80" required />
+                <input ref="teamNameInput" v-model="createForm.name" class="input" maxlength="80" required />
               </label>
               <label class="field">
                 <span>Description</span>
                 <input v-model="createForm.description" class="input" maxlength="5000" />
               </label>
+              <button class="button secondary" type="button" @click="showCreateForm = false">Cancel</button>
               <button class="button" type="submit" :disabled="creating || admin.loading">
                 <Plus :size="17" /> Create
               </button>
