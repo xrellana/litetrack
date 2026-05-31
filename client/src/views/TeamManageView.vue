@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Plus, Save, ShieldAlert, Trash2 } from 'lucide-vue-next';
+import { Plus, Save, ShieldAlert, Trash2, Edit2, X } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import AppHeader from '../components/layout/AppHeader.vue';
@@ -20,6 +20,17 @@ const error = ref('');
 const loaded = ref(false);
 const teamForm = reactive({ name: '', description: '' });
 const addMemberForm = reactive({ identifier: '', role: 'member' });
+const isEditing = ref(false);
+
+function startEditing() {
+  isEditing.value = true;
+}
+
+function cancelEditing() {
+  isEditing.value = false;
+  teamForm.name = teams.activeTeam?.name || '';
+  teamForm.description = teams.activeTeam?.description || '';
+}
 
 // Reactive: true only if current user is admin of this specific team
 const isAdmin = computed(() => {
@@ -58,6 +69,7 @@ async function saveTeam() {
   error.value = '';
   try {
     await teams.updateTeam(teamId.value, teamForm);
+    isEditing.value = false;
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -131,20 +143,40 @@ onMounted(load);
 
         <div class="settings-grid">
           <section class="stack">
-            <form class="panel stack" style="padding:18px" @submit.prevent="saveTeam">
-              <h2 style="margin:0">{{ $t('teams.teamInfo') }}</h2>
-              <label class="field">
-                <span>{{ $t('common.name') }}</span>
-                <input v-model="teamForm.name" class="input" maxlength="80" required />
-              </label>
-              <label class="field">
-                <span>{{ $t('common.description') }}</span>
-                <textarea v-model="teamForm.description" class="textarea" maxlength="5000" />
-              </label>
-              <button class="button" type="submit" :disabled="busy">
-                <Save :size="17" /> {{ $t('common.save') }}
-              </button>
-            </form>
+            <div class="panel stack" style="padding:18px">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                <h2 style="margin:0">{{ $t('teams.teamInfo') }}</h2>
+                <button v-if="!isEditing" class="button icon" @click="startEditing" :title="$t('common.edit')" type="button">
+                  <Edit2 :size="17" />
+                </button>
+              </div>
+
+              <template v-if="!isEditing">
+                <div>
+                  <h3 style="margin: 0 0 8px 0; font-size: 1.25rem;">{{ teamForm.name }}</h3>
+                  <p class="muted" style="white-space: pre-wrap; margin: 0; line-height: 1.5;">{{ teamForm.description || $t('teams.noDescription') }}</p>
+                </div>
+              </template>
+
+              <form v-else class="stack" @submit.prevent="saveTeam">
+                <label class="field">
+                  <span>{{ $t('common.name') }}</span>
+                  <input v-model="teamForm.name" class="input" maxlength="80" required />
+                </label>
+                <label class="field">
+                  <span>{{ $t('common.description') }}</span>
+                  <textarea v-model="teamForm.description" class="textarea" maxlength="5000" />
+                </label>
+                <div class="toolbar" style="margin-top: 8px;">
+                  <button class="button" type="submit" :disabled="busy">
+                    <Save :size="17" /> {{ $t('common.save') }}
+                  </button>
+                  <button class="button secondary" type="button" @click="cancelEditing" :disabled="busy">
+                    <X :size="17" /> {{ $t('common.cancel') }}
+                  </button>
+                </div>
+              </form>
+            </div>
 
             <section class="panel stack" style="padding:18px">
               <h2 style="margin:0">{{ $t('teams.members') }}</h2>
