@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { reactive, watch } from 'vue';
 import { Check, Pin, X } from 'lucide-vue-next';
 import { PRIORITIES, STATUSES } from '../../stores/items';
 
@@ -7,7 +7,6 @@ const props = defineProps({
   show: { type: Boolean, default: false },
   item: { type: Object, default: null },
   members: { type: Array, default: () => [] },
-  tags: { type: Array, default: () => [] },
   availableTeams: { type: Array, default: () => [] },
   selectedTeamId: { type: Number, default: null },
   showTeamSelect: { type: Boolean, default: false },
@@ -16,7 +15,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'submit', 'team-change']);
-const title = computed(() => (props.item ? 'Edit Item' : 'Create Item'));
 const form = reactive({
   title: '',
   description: '',
@@ -25,8 +23,7 @@ const form = reactive({
   assigned_to: '',
   team_id: '',
   due_date: '',
-  is_pinned: false,
-  tag_ids: []
+  is_pinned: false
 });
 
 watch(
@@ -40,7 +37,6 @@ watch(
     form.team_id = props.selectedTeamId || props.item?.team_id || '';
     form.due_date = props.item?.due_date || '';
     form.is_pinned = Boolean(props.item?.is_pinned);
-    form.tag_ids = props.item?.tags?.map((tag) => tag.id) || [];
   },
   { immediate: true }
 );
@@ -54,14 +50,7 @@ watch(
 
 function changeTeam() {
   form.assigned_to = '';
-  form.tag_ids = [];
   emit('team-change', Number(form.team_id));
-}
-
-function toggleTag(tagId) {
-  form.tag_ids = form.tag_ids.includes(tagId)
-    ? form.tag_ids.filter((id) => id !== tagId)
-    : [...form.tag_ids, tagId];
 }
 
 function submit() {
@@ -74,7 +63,6 @@ function submit() {
     assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
     due_date: form.due_date || null,
     is_pinned: form.is_pinned,
-    tag_ids: form.tag_ids,
     updated_at: props.item?.updated_at
   });
 }
@@ -86,20 +74,20 @@ function submit() {
       <form class="modal panel stack" @submit.prevent="submit">
         <div class="section-header">
           <div>
-            <h2 style="margin:0">{{ title }}</h2>
-            <p class="muted" style="margin:4px 0 0">Plain-text work item metadata</p>
+            <h2 style="margin:0">{{ item ? $t('items.editItem') : $t('items.createItem') }}</h2>
+            <p class="muted" style="margin:4px 0 0">{{ $t('items.metadata') }}</p>
           </div>
-          <button class="button icon secondary" type="button" title="Close" @click="emit('close')">
+          <button class="button icon secondary" type="button" :title="$t('common.close')" @click="emit('close')">
             <X :size="18" />
           </button>
         </div>
         <div v-if="error" class="error-box">{{ error }}</div>
         <label class="field">
-          <span>Title</span>
+          <span>{{ $t('items.title') }}</span>
           <input v-model="form.title" class="input" maxlength="140" required />
         </label>
         <label v-if="showTeamSelect && !item" class="field">
-          <span>Team</span>
+          <span>{{ $t('common.team') }}</span>
           <select v-model="form.team_id" class="select" required @change="changeTeam">
             <option v-for="team in availableTeams" :key="team.id" :value="team.id">
               {{ team.name }}
@@ -107,59 +95,45 @@ function submit() {
           </select>
         </label>
         <label class="field">
-          <span>Description</span>
+          <span>{{ $t('common.description') }}</span>
           <textarea v-model="form.description" class="textarea" maxlength="5000" />
         </label>
         <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
           <label class="field">
-            <span>Status</span>
+            <span>{{ $t('items.status') }}</span>
             <select v-model="form.status" class="select">
-              <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ status.label }}</option>
+              <option v-for="status in STATUSES" :key="status.value" :value="status.value">{{ $t(`status.${status.value}`) }}</option>
             </select>
           </label>
           <label class="field">
-            <span>Priority</span>
+            <span>{{ $t('items.priority') }}</span>
             <select v-model="form.priority" class="select">
-              <option v-for="priority in PRIORITIES" :key="priority.value" :value="priority.value">{{ priority.label }}</option>
+              <option v-for="priority in PRIORITIES" :key="priority.value" :value="priority.value">{{ $t(`priority.${priority.value}`) }}</option>
             </select>
           </label>
           <label class="field">
-            <span>Assignee</span>
+            <span>{{ $t('items.assignee') }}</span>
             <select v-model="form.assigned_to" class="select">
-              <option value="">Unassigned</option>
+              <option value="">{{ $t('items.unassigned') }}</option>
               <option v-for="member in members" :key="member.user_id" :value="member.user_id">
                 {{ member.user.display_name }}
               </option>
             </select>
           </label>
           <label class="field">
-            <span>Due date</span>
+            <span>{{ $t('items.dueDate') }}</span>
             <input v-model="form.due_date" class="input" type="date" />
           </label>
         </div>
         <label class="avatar-row" style="cursor:pointer">
           <input v-model="form.is_pinned" type="checkbox" />
-          <Pin :size="16" /> Pin item
+          <Pin :size="16" /> {{ $t('items.pinItem') }}
         </label>
-        <div class="stack-tight">
-          <strong>Tags</strong>
-          <div class="item-meta">
-            <button
-              v-for="tag in tags"
-              :key="tag.id"
-              class="button secondary"
-              type="button"
-              :style="form.tag_ids.includes(tag.id) ? { borderColor: tag.color, color: tag.color } : {}"
-              @click="toggleTag(tag.id)"
-            >
-              {{ tag.name }}
-            </button>
-          </div>
-        </div>
+
         <div class="toolbar" style="justify-content:flex-end">
-          <button class="button secondary" type="button" @click="emit('close')">Cancel</button>
+          <button class="button secondary" type="button" @click="emit('close')">{{ $t('common.cancel') }}</button>
           <button class="button" type="submit" :disabled="busy">
-            <Check :size="17" /> Save
+            <Check :size="17" /> {{ $t('common.save') }}
           </button>
         </div>
       </form>

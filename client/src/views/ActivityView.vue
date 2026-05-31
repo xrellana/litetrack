@@ -28,14 +28,13 @@ onMounted(load);
     <section class="section">
       <div class="section-header">
         <div>
-          <h1 class="page-title">Activity</h1>
-          <p class="muted">Recent team events from item, member, tag, and comment workflows.</p>
+          <h1 class="page-title">{{ $t('activity.title') }}</h1>
+          <p class="muted">{{ $t('activity.recentDescription') }}</p>
         </div>
       </div>
       <div v-if="activity.error" class="error-box">{{ activity.error }}</div>
-      <div v-if="activity.loading" class="empty">Loading activity...</div>
+      <div v-if="activity.loading" class="empty">{{ $t('activity.loading') }}</div>
       <ActivityFeed v-else :rows="activity.rows" />
     </section>
   </main>
 </template>
-

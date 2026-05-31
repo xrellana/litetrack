@@ -2,16 +2,16 @@ import { defineStore } from 'pinia';
 import api from '../services/api';
 
 export const STATUSES = [
-  { value: 'todo', label: 'To do' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'done', label: 'Done' }
+  { value: 'todo' },
+  { value: 'in_progress' },
+  { value: 'done' }
 ];
 
 export const PRIORITIES = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' }
+  { value: 'low' },
+  { value: 'medium' },
+  { value: 'high' },
+  { value: 'urgent' }
 ];
 
 export const useItemsStore = defineStore('items', {
@@ -20,7 +20,6 @@ export const useItemsStore = defineStore('items', {
     viewIds: [],
     activeItemId: null,
     updatesByItem: {},
-    commentsByItem: {},
     loading: false,
     error: null,
     page: { limit: 50, offset: 0, total: 0 }
@@ -28,8 +27,7 @@ export const useItemsStore = defineStore('items', {
   getters: {
     items: (state) => state.viewIds.map((id) => state.itemsById[id]).filter(Boolean),
     activeItem: (state) => state.itemsById[state.activeItemId] || null,
-    updatesForActive: (state) => state.updatesByItem[state.activeItemId] || [],
-    commentsForActive: (state) => state.commentsByItem[state.activeItemId] || []
+    updatesForActive: (state) => state.updatesByItem[state.activeItemId] || []
   },
   actions: {
     upsertItem(item) {
@@ -51,16 +49,10 @@ export const useItemsStore = defineStore('items', {
       const id = Number(itemId);
       const rows = this.updatesByItem[id] || [];
       const index = rows.findIndex((row) => row.id === update.id);
-      const next = index >= 0 ? rows.map((row) => (row.id === update.id ? update : row)) : [...rows, update];
+      const next = index >= 0 ? rows.map((row) => (row.id === update.id ? update : row)) : [update, ...rows];
       this.updatesByItem = { ...this.updatesByItem, [id]: next };
     },
-    upsertComment(itemId, comment) {
-      const id = Number(itemId);
-      const rows = this.commentsByItem[id] || [];
-      const index = rows.findIndex((row) => row.id === comment.id);
-      const next = index >= 0 ? rows.map((row) => (row.id === comment.id ? comment : row)) : [...rows, comment];
-      this.commentsByItem = { ...this.commentsByItem, [id]: next };
-    },
+
     async fetchItems(teamId, filters = {}) {
       this.loading = true;
       this.error = null;
@@ -78,16 +70,32 @@ export const useItemsStore = defineStore('items', {
         this.loading = false;
       }
     },
+    async fetchAllItems(filters = {}) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await api.get('/items', { params: filters });
+        const rows = response.data.data;
+        this.itemsById = { ...this.itemsById, ...Object.fromEntries(rows.map((item) => [item.id, item])) };
+        this.viewIds = rows.map((item) => item.id);
+        this.page = response.data.page;
+        return rows;
+      } catch (error) {
+        this.error = error.message;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
     async fetchItem(itemId) {
       this.loading = true;
       this.error = null;
       try {
         const response = await api.get(`/items/${itemId}`);
-        const { item, updates, comments } = response.data.data;
+        const { item, updates } = response.data.data;
         this.activeItemId = item.id;
         this.upsertItem(item);
         this.updatesByItem = { ...this.updatesByItem, [item.id]: updates };
-        this.commentsByItem = { ...this.commentsByItem, [item.id]: comments };
         return response.data.data;
       } catch (error) {
         this.error = error.message;
@@ -115,11 +123,6 @@ export const useItemsStore = defineStore('items', {
       this.upsertUpdate(itemId, response.data.data);
       return response.data.data;
     },
-    async postComment(itemId, payload) {
-      const response = await api.post(`/items/${itemId}/comments`, payload);
-      this.upsertComment(itemId, response.data.data);
-      return response.data.data;
-    }
+
   }
 });
-

@@ -1,17 +1,23 @@
 <script setup>
 import { computed } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
-import { Activity, LayoutDashboard, ListTodo, LogOut, Settings, ShieldCheck, Users, WifiOff } from 'lucide-vue-next';
+import { BriefcaseBusiness, LogOut, Settings, ShieldCheck, Users, WifiOff, Sun, Moon, Monitor } from 'lucide-vue-next';
 import UserAvatar from '../common/UserAvatar.vue';
 import { socketState } from '../../services/socket';
 import { useAuthStore } from '../../stores/auth';
 import { useTeamsStore } from '../../stores/teams';
+import { useTheme } from '../../composables/useTheme';
+import LanguageSwitcher from '../LanguageSwitcher.vue';
 
 const auth = useAuthStore();
 const teams = useTeamsStore();
+const { themePref, cycleTheme } = useTheme();
 const route = useRoute();
 const router = useRouter();
-const teamId = computed(() => Number(route.params.id || teams.activeTeamId));
+const teamId = computed(() => Number(route.params.id) || null);
+const workActive = computed(() => ['work', 'global-my-items'].includes(route.name));
+const teamsActive = computed(() => route.name === 'teams' || route.path.startsWith('/team/'));
+const hasTeamAdminAccess = computed(() => teams.teams.some((team) => team.role === 'admin'));
 
 async function handleLogout() {
   await auth.logout();
@@ -21,52 +27,46 @@ async function handleLogout() {
 
 <template>
   <header class="topbar">
-    <RouterLink class="avatar-row" to="/teams">
+    <RouterLink class="avatar-row" to="/">
       <span class="brand-mark">LT</span>
-      <span>
-        <strong>{{ teams.activeTeam?.name || 'LiteTrack' }}</strong>
-        <small class="muted" style="display:block">Team progress tracker</small>
-      </span>
+      <strong>LiteTrack</strong>
     </RouterLink>
 
-    <nav v-if="teamId" class="nav-links" aria-label="Team navigation">
-      <RouterLink v-if="auth.user?.is_instance_admin" class="nav-link" to="/admin">
-        <ShieldCheck :size="17" /> Admin
-      </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'dashboard', params: { id: teamId } }">
-        <LayoutDashboard :size="17" /> Dashboard
-      </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'my-items', params: { id: teamId } }">
-        <ListTodo :size="17" /> My Items
-      </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'activity', params: { id: teamId } }">
-        <Activity :size="17" /> Activity
-      </RouterLink>
-      <RouterLink class="nav-link" :to="{ name: 'settings', params: { id: teamId } }">
-        <Settings :size="17" /> Settings
-      </RouterLink>
+    <nav v-if="auth.user?.is_instance_admin" class="nav-links" :aria-label="$t('nav.adminAria')">
+      <RouterLink class="nav-link" :to="{ name: 'admin-overview' }"><ShieldCheck :size="17" /> {{ $t('nav.overview') }}</RouterLink>
+      <RouterLink class="nav-link" :to="{ name: 'admin-teams' }"><Users :size="17" /> {{ $t('nav.teams') }}</RouterLink>
+      <RouterLink class="nav-link" :to="{ name: 'admin-users' }"><Users :size="17" /> {{ $t('nav.users') }}</RouterLink>
     </nav>
-    <nav v-else class="nav-links">
-      <RouterLink v-if="auth.user?.is_instance_admin" class="nav-link" to="/admin">
-        <ShieldCheck :size="17" /> Admin
+    <nav v-else class="nav-links" :aria-label="$t('nav.workAria')">
+      <RouterLink class="nav-link" :class="{ 'router-link-active': workActive }" :to="{ name: 'work' }">
+        <BriefcaseBusiness :size="17" /> {{ $t('nav.work') }}
       </RouterLink>
-      <RouterLink class="nav-link" to="/teams"><Users :size="17" /> Teams</RouterLink>
+      <RouterLink v-if="hasTeamAdminAccess" class="nav-link" :class="{ 'router-link-active': teamsActive }" to="/teams">
+        <Users :size="17" /> {{ $t('nav.teams') }}
+      </RouterLink>
     </nav>
 
-    <div class="toolbar" style="justify-content:flex-end">
+    <div class="toolbar">
       <span v-if="teamId && !socketState.connected" class="badge offline">
-        <WifiOff :size="14" /> Offline
+        <WifiOff :size="14" /> {{ $t('nav.offline') }}
       </span>
+
       <span class="avatar-row">
         <UserAvatar :user="auth.user" />
-        <span style="min-width:0">
-          <strong>{{ auth.user?.display_name }}</strong>
-          <small class="muted" style="display:block">
-            {{ auth.user?.username }}{{ auth.user?.is_instance_admin ? ' · instance admin' : '' }}
-          </small>
-        </span>
+        <strong>{{ auth.user?.display_name }}</strong>
       </span>
-      <button class="button icon" title="Logout" @click="handleLogout">
+
+      <LanguageSwitcher />
+
+      <RouterLink class="button icon secondary" :title="$t('nav.accountSettings')" :to="{ name: 'settings' }">
+        <Settings :size="18" />
+      </RouterLink>
+      <button class="button icon secondary" :title="$t('nav.toggleTheme')" @click="cycleTheme">
+        <Sun v-if="themePref === 'light'" :size="18" />
+        <Moon v-else-if="themePref === 'dark'" :size="18" />
+        <Monitor v-else :size="18" />
+      </button>
+      <button class="button icon" :title="$t('nav.logout')" @click="handleLogout">
         <LogOut :size="18" />
       </button>
     </div>

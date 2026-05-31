@@ -94,4 +94,14 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
   return sendData(res, { user: publicUser(user) });
 }));
 
+const updateMeSchema = z.object({
+  display_name: z.string().trim().min(1).max(80)
+});
+
+router.patch('/me', authenticate, authLimiter, validateBody(updateMeSchema), asyncHandler(async (req, res) => {
+  await db('users').where({ id: req.user.id }).update({ display_name: req.body.display_name });
+  const user = await db('users').select(USER_COLUMNS).where({ id: req.user.id }).first();
+  return sendData(res, { user: publicUser(user) });
+}));
+
 module.exports = router;

@@ -51,41 +51,77 @@ async function getMembership(db, teamId, userId) {
     .first();
 }
 
+async function requireTeamExists(db, teamId) {
+  const team = await db('teams').where({ id: Number(teamId) }).first();
+  if (!team) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
+  }
+  return team;
+}
+
 async function requireMembership(db, teamId, userId) {
+  if (await isInstanceAdmin(db, userId)) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
+  }
+
   const membership = await getMembership(db, teamId, userId);
   if (!membership) {
-    if (await isInstanceAdmin(db, userId)) {
-      return {
-        id: null,
-        team_id: Number(teamId),
-        user_id: Number(userId),
-        role: 'admin',
-        is_instance_admin: true
-      };
-    }
     throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
   }
   return membership;
 }
 
 async function requireAdmin(db, teamId, userId) {
-  const membership = await getMembership(db, teamId, userId);
-  if (!membership && await isInstanceAdmin(db, userId)) {
-    return {
-      id: null,
-      team_id: Number(teamId),
-      user_id: Number(userId),
-      role: 'admin',
-      is_instance_admin: true
-    };
+  if (await isInstanceAdmin(db, userId)) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
   }
+
+  const membership = await getMembership(db, teamId, userId);
   if (!membership) {
     throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
   }
   if (membership.role !== 'admin') {
-    if (await isInstanceAdmin(db, userId)) {
-      return { ...membership, role: 'admin', is_instance_admin: true };
-    }
+    throw new AppError(403, 'FORBIDDEN', 'Admin access is required.');
+  }
+  return membership;
+}
+
+async function requireTeamDefinitionAccess(db, teamId, userId) {
+  if (await isInstanceAdmin(db, userId)) {
+    await requireTeamExists(db, teamId);
+    return {
+      id: null,
+      team_id: Number(teamId),
+      user_id: Number(userId),
+      role: 'instance_admin',
+      is_instance_admin: true
+    };
+  }
+
+  const membership = await getMembership(db, teamId, userId);
+  if (!membership) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
+  }
+  return membership;
+}
+
+async function requireTeamDefinitionAdmin(db, teamId, userId) {
+  if (await isInstanceAdmin(db, userId)) {
+    await requireTeamExists(db, teamId);
+    return {
+      id: null,
+      team_id: Number(teamId),
+      user_id: Number(userId),
+      role: 'instance_admin',
+      is_instance_admin: true
+    };
+  }
+
+  const membership = await getMembership(db, teamId, userId);
+  if (!membership) {
+    throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.');
+  }
+  if (membership.role !== 'admin') {
     throw new AppError(403, 'FORBIDDEN', 'Admin access is required.');
   }
   return membership;
@@ -101,40 +137,50 @@ async function requireItemAccess(db, itemId, userId) {
 }
 
 function canEditItem(membership, item, userId) {
-  return membership.role === 'admin' || item.created_by === Number(userId);
+  return Boolean(membership) && ['admin', 'member'].includes(membership.role);
 }
 
 function canChangeItemStatus(membership, item, userId) {
-  return canEditItem(membership, item, userId) || item.assigned_to === Number(userId);
+  return canEditItem(membership, item, userId);
 }
 
 async function ensureAssigneeIsMember(db, teamId, assignedTo) {
   if (!assignedTo) return;
-  const membership = await getMembership(db, teamId, assignedTo);
-  if (!membership) {
+  const membership = await db('team_members')
+    .join('users', 'users.id', 'team_members.user_id')
+    .select('team_members.id', 'users.is_instance_admin')
+    .where({ 'team_members.team_id': Number(teamId), 'team_members.user_id': Number(assignedTo) })
+    .first();
+  if (!membership || membership.is_instance_admin) {
     throw new AppError(400, 'VALIDATION_ERROR', 'Assignee must be a member of this team.');
-  }
-}
-
-async function ensureTagsBelongToTeam(db, teamId, tagIds = []) {
-  if (!tagIds.length) return;
-  const rows = await db('tags').whereIn('id', tagIds).andWhere({ team_id: teamId });
-  if (rows.length !== tagIds.length) {
-    throw new AppError(400, 'VALIDATION_ERROR', 'All tags must belong to the item team.');
   }
 }
 
 async function countAdmins(db, teamId) {
   const row = await db('team_members')
-    .where({ team_id: Number(teamId), role: 'admin' })
+    .join('users', 'users.id', 'team_members.user_id')
+    .where({
+      'team_members.team_id': Number(teamId),
+      'team_members.role': 'admin',
+      'users.is_instance_admin': 0
+    })
     .count({ total: 'id' })
     .first();
   return Number(row.total || 0);
 }
 
 async function assertNotLastAdmin(db, teamId, userId) {
-  const membership = await getMembership(db, teamId, userId);
-  if (membership && membership.role === 'admin' && await countAdmins(db, teamId) <= 1) {
+  const membership = await db('team_members')
+    .join('users', 'users.id', 'team_members.user_id')
+    .select('team_members.role', 'users.is_instance_admin')
+    .where({ 'team_members.team_id': Number(teamId), 'team_members.user_id': Number(userId) })
+    .first();
+  if (
+    membership &&
+    !membership.is_instance_admin &&
+    membership.role === 'admin' &&
+    await countAdmins(db, teamId) <= 1
+  ) {
     throw new AppError(400, 'LAST_ADMIN', 'A team must always have at least one admin.');
   }
 }
@@ -166,20 +212,16 @@ async function hydrateUsers(db, rows, fields) {
 async function hydrateItems(db, items) {
   if (!items.length) return [];
   const ids = items.map((item) => item.id);
-  const tags = await db('item_tags')
-    .join('tags', 'tags.id', 'item_tags.tag_id')
-    .select('item_tags.item_id', 'tags.id', 'tags.name', 'tags.color')
-    .whereIn('item_tags.item_id', ids);
-  const tagsByItem = tags.reduce((acc, tag) => {
-    acc[tag.item_id] ||= [];
-    acc[tag.item_id].push({ id: tag.id, name: tag.name, color: tag.color });
-    return acc;
-  }, {});
+  const teamIds = [...new Set(items.map((item) => item.team_id).filter(Boolean))];
   const usersById = await hydrateUsers(db, items, ['created_by', 'assigned_to']);
+  const teams = teamIds.length
+    ? await db('teams').select('id', 'name', 'description').whereIn('id', teamIds)
+    : [];
+  const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]));
   return items.map((item) => ({
     ...item,
     is_pinned: Boolean(item.is_pinned),
-    tags: tagsByItem[item.id] || [],
+    team: teamsById[item.team_id] || null,
     creator: usersById[item.created_by] || null,
     assignee: usersById[item.assigned_to] || null
   }));
@@ -219,7 +261,6 @@ module.exports = {
   canEditItem,
   emitTeam,
   ensureAssigneeIsMember,
-  ensureTagsBelongToTeam,
   generateInviteCode,
   getMembership,
   hydrateDiscussionRows,
@@ -234,5 +275,8 @@ module.exports = {
   requireAdmin,
   requireInstanceAdmin,
   requireItemAccess,
-  requireMembership
+  requireMembership,
+  requireTeamDefinitionAccess,
+  requireTeamDefinitionAdmin,
+  requireTeamExists
 };

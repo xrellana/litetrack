@@ -21,9 +21,8 @@ const initials = computed(() => {
   <span
     class="avatar"
     :style="{ width: `${size}px`, height: `${size}px`, background: user?.avatar_color || '#22d3ee' }"
-    :title="user?.display_name || user?.username || 'Unassigned'"
+    :title="user?.display_name || user?.username || $t('items.unassigned')"
   >
     {{ initials }}
   </span>
 </template>
-

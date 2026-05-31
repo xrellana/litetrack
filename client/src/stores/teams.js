@@ -6,22 +6,19 @@ export const useTeamsStore = defineStore('teams', {
     teams: [],
     activeTeamId: null,
     membersByTeamId: {},
-    tagsByTeamId: {},
     loading: false,
     error: null
   }),
   getters: {
     activeTeam: (state) => state.teams.find((team) => team.id === Number(state.activeTeamId)) || null,
     members: (state) => Object.values(state.membersByTeamId[state.activeTeamId] || {}),
-    tags: (state) => Object.values(state.tagsByTeamId[state.activeTeamId] || {}).sort((a, b) => a.name.localeCompare(b.name)),
     membersForTeam: (state) => (teamId) => Object.values(state.membersByTeamId[Number(teamId)] || {}),
-    tagsForTeam: (state) => (teamId) => Object.values(state.tagsByTeamId[Number(teamId)] || {}).sort((a, b) => a.name.localeCompare(b.name)),
     currentRole: (state) => {
       const team = state.teams.find((row) => row.id === Number(state.activeTeamId));
       return team?.role || 'member';
     },
     isAdmin() {
-      return this.currentRole === 'admin' || this.currentRole === 'instance_admin';
+      return this.currentRole === 'admin';
     }
   },
   actions: {
@@ -51,23 +48,6 @@ export const useTeamsStore = defineStore('teams', {
       delete copy[Number(userId)];
       this.membersByTeamId = { ...this.membersByTeamId, [targetTeamId]: copy };
     },
-    upsertTag(tag) {
-      if (!tag) return;
-      const teamId = Number(tag.team_id || this.activeTeamId);
-      this.tagsByTeamId = {
-        ...this.tagsByTeamId,
-        [teamId]: {
-          ...(this.tagsByTeamId[teamId] || {}),
-          [tag.id]: tag
-        }
-      };
-    },
-    removeTag(tagId, teamId = this.activeTeamId) {
-      const targetTeamId = Number(teamId);
-      const copy = { ...(this.tagsByTeamId[targetTeamId] || {}) };
-      delete copy[Number(tagId)];
-      this.tagsByTeamId = { ...this.tagsByTeamId, [targetTeamId]: copy };
-    },
     async fetchTeams() {
       this.loading = true;
       this.error = null;
@@ -90,36 +70,12 @@ export const useTeamsStore = defineStore('teams', {
       };
       return response.data.data;
     },
-    async fetchTags(teamId) {
-      const response = await api.get(`/teams/${teamId}/tags`);
-      this.tagsByTeamId = {
-        ...this.tagsByTeamId,
-        [Number(teamId)]: Object.fromEntries(response.data.data.map((tag) => [tag.id, tag]))
-      };
-      return response.data.data;
-    },
     async fetchTeamContext(teamId) {
       this.setActiveTeam(teamId);
-      await Promise.all([this.fetchTeams(), this.fetchMembers(teamId), this.fetchTags(teamId)]);
-    },
-    async createTeam(payload) {
-      const response = await api.post('/teams', payload);
-      this.upsertTeam(response.data.data);
-      return response.data.data;
-    },
-    async joinTeam(inviteCode) {
-      const response = await api.post('/teams/join', { invite_code: inviteCode });
-      this.upsertTeam(response.data.data.team);
-      this.upsertMember(response.data.data.member);
-      return response.data.data.team;
+      await Promise.all([this.fetchTeams(), this.fetchMembers(teamId)]);
     },
     async updateTeam(teamId, payload) {
       const response = await api.put(`/teams/${teamId}`, payload);
-      this.upsertTeam(response.data.data);
-      return response.data.data;
-    },
-    async regenerateInviteCode(teamId) {
-      const response = await api.post(`/teams/${teamId}/invite-code/regenerate`);
       this.upsertTeam(response.data.data);
       return response.data.data;
     },
@@ -128,23 +84,16 @@ export const useTeamsStore = defineStore('teams', {
       this.upsertMember(response.data.data);
       return response.data.data;
     },
+    async addMemberToTeam(teamId, payload) {
+      const response = await api.post(`/teams/${teamId}/members`, payload);
+      this.upsertMember(response.data.data);
+      await this.fetchTeams();
+      return response.data.data;
+    },
     async removeMemberFromTeam(teamId, userId) {
       await api.delete(`/teams/${teamId}/members/${userId}`);
       this.removeMember(userId, teamId);
-    },
-    async createTag(teamId, payload) {
-      const response = await api.post(`/teams/${teamId}/tags`, payload);
-      this.upsertTag(response.data.data);
-      return response.data.data;
-    },
-    async updateTag(tagId, payload) {
-      const response = await api.put(`/tags/${tagId}`, payload);
-      this.upsertTag(response.data.data);
-      return response.data.data;
-    },
-    async deleteTag(tagId) {
-      await api.delete(`/tags/${tagId}`);
-      this.removeTag(tagId);
+      await this.fetchTeams();
     }
   }
 });

@@ -1,12 +1,6 @@
 <script setup>
 import { ArrowDown, ArrowUp, ChevronsUp, Minus } from 'lucide-vue-next';
-
-const labels = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-  urgent: 'Urgent'
-};
+import { useI18n } from 'vue-i18n';
 
 const icons = {
   low: ArrowDown,
@@ -18,11 +12,18 @@ const icons = {
 defineProps({
   priority: { type: String, required: true }
 });
+
+const { t, te } = useI18n();
+
+function priorityLabel(priority) {
+  const key = `priority.${priority}`;
+  return te(key) ? t(key) : priority;
+}
 </script>
 
 <template>
   <span class="priority" :class="priority">
     <component :is="icons[priority]" :size="14" aria-hidden="true" />
-    {{ labels[priority] || priority }}
+    {{ priorityLabel(priority) }}
   </span>
 </template>

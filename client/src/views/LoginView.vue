@@ -14,7 +14,7 @@ async function submit() {
   error.value = '';
   try {
     await auth.login(form);
-    await router.push(route.query.redirect || '/teams');
+    await router.push(route.query.redirect || '/');
   } catch (err) {
     error.value = err.message;
   }
@@ -27,33 +27,32 @@ async function submit() {
       <div class="auth-brand">
         <div class="brand-mark">LT</div>
         <div>
-          <h1>LiteTrack</h1>
-          <p>Real-time work item tracking for small teams.</p>
+          <h1>{{ $t('app.name') }}</h1>
+          <p>{{ $t('app.taglineLogin') }}</p>
         </div>
       </div>
       <form class="auth-form stack" @submit.prevent="submit">
         <div>
-          <h2 style="margin:0">Log in</h2>
-          <p class="muted" style="margin:4px 0 0">Use your username or email.</p>
+          <h2 style="margin:0">{{ $t('auth.login') }}</h2>
+          <p class="muted" style="margin:4px 0 0">{{ $t('auth.loginSubtitle') }}</p>
         </div>
         <div v-if="error" class="error-box">{{ error }}</div>
         <label class="field">
-          <span>Username or email</span>
+          <span>{{ $t('common.usernameOrEmail') }}</span>
           <input v-model="form.identifier" class="input" autocomplete="username" required />
         </label>
         <label class="field">
-          <span>Password</span>
+          <span>{{ $t('common.password') }}</span>
           <input v-model="form.password" class="input" type="password" autocomplete="current-password" required />
         </label>
         <button class="button" type="submit" :disabled="auth.loading">
-          <LogIn :size="18" /> Log in
+          <LogIn :size="18" /> {{ $t('auth.login') }}
         </button>
         <p class="muted">
-          Need an account?
-          <RouterLink to="/register" style="color:var(--primary)">Register</RouterLink>
+          {{ $t('auth.needAccount') }}
+          <RouterLink to="/register" style="color:var(--primary)">{{ $t('auth.register') }}</RouterLink>
         </p>
       </form>
     </section>
   </main>
 </template>
-

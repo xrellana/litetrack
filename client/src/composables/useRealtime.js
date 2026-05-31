@@ -16,10 +16,7 @@ export function useRealtime(teamIdRef) {
     item_updated: ({ item }) => items.upsertItem(item),
     item_deleted: ({ itemId }) => items.removeItem(itemId),
     update_posted: ({ update, itemId }) => items.upsertUpdate(itemId, update),
-    comment_posted: ({ comment, itemId }) => items.upsertComment(itemId, comment),
-    tag_created: ({ tag }) => teams.upsertTag(tag),
-    tag_updated: ({ tag }) => teams.upsertTag(tag),
-    tag_deleted: ({ tagId, teamId }) => teams.removeTag(tagId, teamId),
+
     member_joined: ({ member }) => teams.upsertMember(member),
     member_removed: ({ userId, teamId }) => teams.removeMember(userId, teamId),
     team_updated: ({ team }) => teams.upsertTeam(team),
@@ -30,8 +27,14 @@ export function useRealtime(teamIdRef) {
 
   const stop = watch(
     teamIdRef,
-    async (teamId) => {
-      if (teamId) await joinTeamRoom(Number(teamId));
+    async (value) => {
+      const teamIds = Array.isArray(value) ? value : [value];
+      await Promise.all(
+        teamIds
+          .map((teamId) => Number(teamId))
+          .filter((teamId) => Number.isInteger(teamId) && teamId > 0)
+          .map((teamId) => joinTeamRoom(teamId))
+      );
     },
     { immediate: true }
   );

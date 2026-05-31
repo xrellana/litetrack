@@ -5,8 +5,6 @@ exports.seed = async function seed(knex) {
   await knex('activity_log').del();
   await knex('comments').del();
   await knex('progress_updates').del();
-  await knex('item_tags').del();
-  await knex('tags').del();
   await knex('items').del();
   await knex('team_members').del();
   await knex('teams').del();
@@ -20,6 +18,14 @@ exports.seed = async function seed(knex) {
     display_name: 'Avery Chen',
     avatar_color: avatarColor('admin@litetrack.local'),
     is_instance_admin: 1
+  });
+  const [teamAdminId] = await knex('users').insert({
+    username: 'teamadmin',
+    email: 'teamadmin@litetrack.local',
+    password_hash: passwordHash,
+    display_name: 'Jordan Lee',
+    avatar_color: avatarColor('teamadmin@litetrack.local'),
+    is_instance_admin: 0
   });
   const [memberId] = await knex('users').insert({
     username: 'member',
@@ -37,16 +43,14 @@ exports.seed = async function seed(knex) {
   });
 
   await knex('team_members').insert([
-    { team_id: teamId, user_id: adminId, role: 'admin' },
+    { team_id: teamId, user_id: teamAdminId, role: 'admin' },
     { team_id: teamId, user_id: memberId, role: 'member' }
   ]);
 
-  const [uiTag] = await knex('tags').insert({ team_id: teamId, name: 'UI', color: '#22d3ee' });
-  const [apiTag] = await knex('tags').insert({ team_id: teamId, name: 'API', color: '#34d399' });
 
   const [itemId] = await knex('items').insert({
     team_id: teamId,
-    created_by: adminId,
+    created_by: teamAdminId,
     assigned_to: memberId,
     title: 'Wire dashboard filters',
     description: 'Keep dashboard filter state reflected in URL query params.',
@@ -57,10 +61,7 @@ exports.seed = async function seed(knex) {
     updated_at: now()
   });
 
-  await knex('item_tags').insert([
-    { item_id: itemId, tag_id: uiTag },
-    { item_id: itemId, tag_id: apiTag }
-  ]);
+
   await knex('progress_updates').insert({
     item_id: itemId,
     user_id: memberId,
@@ -69,12 +70,12 @@ exports.seed = async function seed(knex) {
   });
   await knex('comments').insert({
     item_id: itemId,
-    user_id: adminId,
+    user_id: teamAdminId,
     content: 'Keep the status change explicit; no drag-and-drop in V1.'
   });
   await knex('activity_log').insert({
     team_id: teamId,
-    user_id: adminId,
+    user_id: teamAdminId,
     action: 'item_created',
     entity_type: 'item',
     entity_id: itemId,
